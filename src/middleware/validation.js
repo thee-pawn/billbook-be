@@ -121,7 +121,8 @@ const schemas = {
     country: Joi.string().max(100).optional(),
     pincode: Joi.string().max(20).optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
-    longitude: Joi.number().min(-180).max(180).optional()
+    longitude: Joi.number().min(-180).max(180).optional(),
+    logo_url: Joi.string().uri().max(500).optional()
   }),
 
   // Store update validation (all fields optional)
@@ -144,7 +145,8 @@ const schemas = {
     country: Joi.string().max(100).optional(),
     pincode: Joi.string().max(20).optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
-    longitude: Joi.number().min(-180).max(180).optional()
+    longitude: Joi.number().min(-180).max(180).optional(),
+    logo_url: Joi.string().uri().max(500).optional()
   }).min(1), // At least one field must be provided
 
   // Store user management validation

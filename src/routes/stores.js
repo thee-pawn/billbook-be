@@ -28,7 +28,8 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
       country,
       pincode,
       latitude,
-      longitude
+      longitude,
+      logo_url
     } = req.body;
 
     // Start transaction
@@ -41,16 +42,16 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
           name, mobile_no, whatsapp_no, contact_email_id, reporting_email_id,
           gst_number, tax_billing, business_category, instagram_link, facebook_link,
           google_maps_link, address_line_1, locality, city, state, country,
-          pincode, latitude, longitude, created_on, updated_on
+          pincode, latitude, longitude, logo_url, created_on, updated_on
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
+          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW()
         ) RETURNING *`,
         [
           name, mobile_no, whatsapp_no, contact_email_id, reporting_email_id,
           gst_number, tax_billing, business_category, instagram_link, facebook_link,
           google_maps_link, address_line_1, locality, city, state, country,
-          pincode, latitude, longitude
+          pincode, latitude, longitude, logo_url
         ]
       );
 
@@ -91,6 +92,7 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
             pincode: store.pincode,
             latitude: store.latitude,
             longitude: store.longitude,
+            logo_url: store.logo_url,
             created_on: store.created_on,
             updated_on: store.updated_on
           },
@@ -202,6 +204,7 @@ router.put('/:storeId', authenticateToken, generalLimiter, validate(schemas.upda
           pincode: store.pincode,
           latitude: store.latitude,
           longitude: store.longitude,
+          logo_url: store.logo_url,
           created_on: store.created_on,
           updated_on: store.updated_on
         }
@@ -261,6 +264,7 @@ router.get('/:storeId', authenticateToken, async (req, res, next) => {
           pincode: storeData.pincode,
           latitude: storeData.latitude,
           longitude: storeData.longitude,
+          logo_url: storeData.logo_url,
           created_on: storeData.created_on,
           updated_on: storeData.updated_on
         },
@@ -340,6 +344,7 @@ router.get('/', authenticateToken, async (req, res, next) => {
       pincode: store.pincode,
       latitude: store.latitude,
       longitude: store.longitude,
+      logo_url: store.logo_url,
       created_on: store.created_on,
       updated_on: store.updated_on,
       user_role: store.role,
