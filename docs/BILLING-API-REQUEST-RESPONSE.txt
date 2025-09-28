@@ -1,0 +1,673 @@
+BILLING API - DETAILED REQUEST/RESPONSE STRUCTURES
+=================================================
+
+GENERAL INFORMATION:
+- Base URL: /api/v1/billing/{storeId}
+- Authentication: Bearer Token (JWT) in Authorization header
+- Content-Type: application/json
+- All timestamps in ISO 8601 format (YYYY-MM-DDTHH:MM:SS.sssZ)
+- All monetary amounts as decimal numbers
+- Phone numbers in E.164 format (+countrycode + number)
+
+=================================================
+ENDPOINT 1: SAVE BILL (CREATE INVOICE)
+=================================================
+
+METHOD: POST
+PATH: /api/v1/billing/{storeId}/bills
+
+REQUEST HEADERS:
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "Content-Type": "application/json",
+  "Idempotency-Key": "bill-2025-09-26-12345" // Optional but recommended
+}
+
+REQUEST BODY STRUCTURE:
+{
+  // CUSTOMER IDENTIFICATION (Choose ONE):
+  "customer_id": "550e8400-e29b-41d4-a716-446655440000", // Existing customer UUID
+  // OR
+  "customer": {                                          // New customer details
+    "name": "John Doe",                    // Required: string, 1-255 chars
+    "gender": "Male",                      // Optional: Male|Female|Other
+    "contact_no": "+919876543210",         // Required: E.164 format
+    "address": "123 Main Street, City",    // Optional: string, max 500 chars
+    "email": "john.doe@example.com"        // Optional: valid email
+  },
+
+  // COUPON HANDLING (Optional):
+  "coupon_code": "SAVE20",                 // Single coupon code
+  "coupon_codes": ["SAVE20", "WELCOME10"], // Multiple coupon codes
+  "referral_code": "REF123456",            // Referral code
+
+  // ITEMS (Required - at least 1 item):
+  "items": [
+    {
+      "line_no": 1,                        // Required: integer, unique per bill
+      "type": "service",                   // Required: service|product|membership
+      "id": "550e8400-e29b-41d4-a716-446655440001", // Required: catalog item UUID
+      "staff_id": "550e8400-e29b-41d4-a716-446655440002", // Optional: staff UUID
+      "qty": 2,                            // Required: positive integer
+      "discount_type": "percent",          // Optional: percent|flat
+      "discount_value": 10.5,              // Optional: discount amount/percentage
+      "cgst": 9,                           // Required: CGST rate as percentage
+      "sgst": 9                            // Required: SGST rate as percentage
+    },
+    {
+      "line_no": 2,
+      "type": "product",
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "staff_id": null,
+      "qty": 1,
+      "discount_type": "flat",
+      "discount_value": 50.00,
+      "cgst": 12,
+      "sgst": 12
+    }
+  ],
+
+  // BILL LEVEL DISCOUNT (Optional):
+  "discount": 100.00,                      // Bill-level discount amount
+
+  // PAYMENT INFORMATION:
+  "payment_mode": "split",                 // Required: cash|card|upi|wallet|split|none
+  "payment_amount": 1500.00,               // Total payment amount
+  
+  // PAYMENT DETAILS (Required if payment_mode != "none"):
+  "payments": [
+    {
+      "mode": "upi",                       // Required: cash|card|upi|wallet
+      "amount": 900.00,                    // Required: payment amount
+      "reference": "UPI-TXN-123456789",    // Optional: transaction reference
+      "timestamp": "2025-09-26T14:30:00.000Z" // Required: payment timestamp
+    },
+    {
+      "mode": "cash",
+      "amount": 600.00,
+      "reference": null,
+      "timestamp": "2025-09-26T14:31:00.000Z"
+    }
+  ],
+
+  // TIMESTAMPS:
+  "billing_timestamp": "2025-09-26T14:29:00.000Z", // Required: when bill was created
+  "payment_timestamp": "2025-09-26T14:31:00.000Z"  // Optional: when payment completed
+}
+
+PAYMENT MODE RULES:
+- "none": payment_amount = 0, payments = []
+- "cash"|"card"|"upi"|"wallet": Single payment, payments array with 1 item
+- "split": Multiple payments, sum of payment amounts = payment_amount
+
+SUCCESS RESPONSE (201 Created):
+{
+  "success": true,
+  "message": "Bill saved successfully",
+  "data": {
+    "bill_id": "550e8400-e29b-41d4-a716-446655440010",
+    "invoice_number": "INV202500001234",
+    "created_at": "2025-09-26T14:29:15.123Z",
+    "updated_at": "2025-09-26T14:29:15.123Z",
+    
+    // CUSTOMER INFORMATION:
+    "customer": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "John Doe",
+      "phoneNumber": "+919876543210",
+      "address": "123 Main Street, City",
+      "email": "john.doe@example.com",
+      "gender": "Male"
+    },
+
+    // PROCESSED ITEMS WITH CALCULATIONS:
+    "items": [
+      {
+        "line_no": 1,
+        "type": "service",
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "Premium Haircut",
+        "description": "Professional haircut with styling",
+        "staff_id": "550e8400-e29b-41d4-a716-446655440002",
+        "staff_name": "Sarah Johnson",
+        "qty": 2,
+        "unit_price": 500.00,
+        "discount_type": "percent",
+        "discount_value": 10.5,
+        "cgst_rate": 9,
+        "sgst_rate": 9,
+        
+        // COMPUTED AMOUNTS:
+        "base_amount": 1000.00,              // qty * unit_price
+        "discount_amount": 105.00,           // line-level discount
+        "taxable_amount": 895.00,            // base_amount - discount_amount
+        "cgst_amount": 80.55,                // CGST calculation
+        "sgst_amount": 80.55,                // SGST calculation
+        "tax_amount": 161.10,                // cgst_amount + sgst_amount
+        "line_total": 1056.10                // taxable_amount + tax_amount
+      },
+      {
+        "line_no": 2,
+        "type": "product",
+        "id": "550e8400-e29b-41d4-a716-446655440003",
+        "name": "Hair Serum Premium",
+        "description": "Professional grade hair serum",
+        "staff_id": null,
+        "staff_name": null,
+        "qty": 1,
+        "unit_price": 800.00,
+        "discount_type": "flat",
+        "discount_value": 50.00,
+        "cgst_rate": 12,
+        "sgst_rate": 12,
+        "base_amount": 800.00,
+        "discount_amount": 50.00,
+        "taxable_amount": 750.00,
+        "cgst_amount": 90.00,
+        "sgst_amount": 90.00,
+        "tax_amount": 180.00,
+        "line_total": 930.00
+      }
+    ],
+
+    // BILL TOTALS:
+    "totals": {
+      "sub_total": 1986.10,                // Sum of all line_totals
+      "discount": 100.00,                  // Bill-level discount
+      "tax_amount": 341.10,                // Total tax amount
+      "cgst_amount": 170.55,               // Total CGST
+      "sgst_amount": 170.55,               // Total SGST
+      "grand_total": 1886.10,              // sub_total - discount
+      "paid": 1500.00,                     // Total payment received
+      "dues": 386.10,                      // Remaining amount (grand_total - paid)
+      "status": "partial"                  // paid|partial|unpaid
+    },
+
+    // PAYMENT RECORDS:
+    "payments": [
+      {
+        "payment_id": "550e8400-e29b-41d4-a716-446655440020",
+        "mode": "upi",
+        "amount": 900.00,
+        "reference": "UPI-TXN-123456789",
+        "timestamp": "2025-09-26T14:30:00.000Z",
+        "created_at": "2025-09-26T14:29:15.123Z"
+      },
+      {
+        "payment_id": "550e8400-e29b-41d4-a716-446655440021",
+        "mode": "cash",
+        "amount": 600.00,
+        "reference": null,
+        "timestamp": "2025-09-26T14:31:00.000Z",
+        "created_at": "2025-09-26T14:29:15.123Z"
+      }
+    ],
+
+    // METADATA:
+    "store_id": "550e8400-e29b-41d4-a716-446655440100",
+    "billing_timestamp": "2025-09-26T14:29:00.000Z",
+    "payment_timestamp": "2025-09-26T14:31:00.000Z",
+    "coupon_codes": ["SAVE20", "WELCOME10"],
+    "referral_code": "REF123456"
+  }
+}
+
+ERROR RESPONSES:
+
+400 Bad Request - Validation Error:
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "customer.contact_no",
+      "message": "Phone number must be in E.164 format",
+      "value": "9876543210"
+    },
+    {
+      "field": "items[0].qty",
+      "message": "Quantity must be greater than 0",
+      "value": 0
+    },
+    {
+      "field": "payments",
+      "message": "Payment amounts do not sum to payment_amount",
+      "expected": 1500.00,
+      "actual": 1400.00
+    }
+  ]
+}
+
+403 Forbidden - Store Access:
+{
+  "success": false,
+  "message": "Access denied to store",
+  "error": "STORE_ACCESS_DENIED"
+}
+
+404 Not Found - Catalog Item:
+{
+  "success": false,
+  "message": "Catalog item not found",
+  "error": "CATALOG_ITEM_NOT_FOUND",
+  "details": {
+    "item_id": "550e8400-e29b-41d4-a716-446655440001",
+    "type": "service"
+  }
+}
+
+409 Conflict - Idempotency:
+{
+  "success": false,
+  "message": "Bill already exists with this idempotency key",
+  "error": "DUPLICATE_IDEMPOTENCY_KEY",
+  "existing_bill": {
+    "bill_id": "550e8400-e29b-41d4-a716-446655440010",
+    "invoice_number": "INV202500001234"
+  }
+}
+
+500 Internal Server Error:
+{
+  "success": false,
+  "message": "Internal server error occurred",
+  "error": "INTERNAL_ERROR"
+}
+
+=================================================
+ENDPOINT 2: LIST BILLS
+=================================================
+
+METHOD: GET
+PATH: /api/v1/billing/{storeId}/bills
+
+REQUEST HEADERS:
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+QUERY PARAMETERS:
+- page: integer (default: 1, min: 1)
+- limit: integer (default: 20, min: 1, max: 100)
+- from: ISO 8601 datetime (start date filter)
+- to: ISO 8601 datetime (end date filter)  
+- q: string (search term for customer name, phone, or invoice number)
+- sort: string (date_asc|date_desc|amount_asc|amount_desc, default: date_desc)
+- status: string (paid|partial|unpaid)
+
+EXAMPLE REQUEST:
+GET /api/v1/billing/store123/bills?page=2&limit=10&from=2025-09-01T00:00:00.000Z&to=2025-09-30T23:59:59.999Z&q=john&sort=amount_desc&status=partial
+
+SUCCESS RESPONSE (200 OK):
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "bill_id": "550e8400-e29b-41d4-a716-446655440010",
+        "invoice_number": "INV202500001234",
+        "created_at": "2025-09-26T14:29:15.123Z",
+        "customer_name": "John Doe",
+        "customer_phone": "+919876543210",
+        "customer_id": "550e8400-e29b-41d4-a716-446655440000",
+        "item_count": 2,
+        "sub_total": 1986.10,
+        "discount": 100.00,
+        "tax_amount": 341.10,
+        "grand_total": 1886.10,
+        "paid": 1500.00,
+        "dues": 386.10,
+        "status": "partial",
+        "billing_timestamp": "2025-09-26T14:29:00.000Z",
+        "payment_timestamp": "2025-09-26T14:31:00.000Z"
+      },
+      {
+        "bill_id": "550e8400-e29b-41d4-a716-446655440011",
+        "invoice_number": "INV202500001235",
+        "created_at": "2025-09-26T15:45:22.456Z",
+        "customer_name": "Jane Smith",
+        "customer_phone": "+919876543211",
+        "customer_id": "550e8400-e29b-41d4-a716-446655440001",
+        "item_count": 1,
+        "sub_total": 590.00,
+        "discount": 0.00,
+        "tax_amount": 90.00,
+        "grand_total": 590.00,
+        "paid": 590.00,
+        "dues": 0.00,
+        "status": "paid",
+        "billing_timestamp": "2025-09-26T15:44:00.000Z",
+        "payment_timestamp": "2025-09-26T15:45:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 2,
+      "limit": 10,
+      "total": 156,
+      "total_pages": 16,
+      "has_previous": true,
+      "has_next": true
+    },
+    "summary": {
+      "total_bills": 156,
+      "total_amount": 87450.50,
+      "paid_amount": 82100.25,
+      "due_amount": 5350.25
+    }
+  }
+}
+
+ERROR RESPONSES:
+
+400 Bad Request - Invalid Parameters:
+{
+  "success": false,
+  "message": "Invalid query parameters",
+  "errors": [
+    {
+      "field": "page",
+      "message": "Page must be greater than 0",
+      "value": 0
+    },
+    {
+      "field": "from",
+      "message": "Invalid date format",
+      "value": "2025-09-01"
+    }
+  ]
+}
+
+403 Forbidden:
+{
+  "success": false,
+  "message": "Access denied to store",
+  "error": "STORE_ACCESS_DENIED"
+}
+
+=================================================
+ENDPOINT 3: HOLD BILL (SAVE AS DRAFT)
+=================================================
+
+METHOD: POST
+PATH: /api/v1/billing/{storeId}/bills/hold
+
+REQUEST HEADERS:
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "Content-Type": "application/json"
+}
+
+REQUEST BODY STRUCTURE:
+{
+  // Same structure as Save Bill, but with relaxed requirements:
+  
+  // CUSTOMER (Required):
+  "customer_id": "550e8400-e29b-41d4-a716-446655440000",
+  // OR
+  "customer": {
+    "name": "Anita Singh",
+    "contact_no": "+919876543210",
+    "gender": "Female",
+    "address": "456 Park Avenue"
+  },
+
+  // ITEMS (Required - at least 1):
+  "items": [
+    {
+      "line_no": 1,
+      "type": "service",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "staff_id": "550e8400-e29b-41d4-a716-446655440002",
+      "qty": 1,
+      "discount_type": "percent",
+      "discount_value": 0,
+      "cgst": 9,
+      "sgst": 9
+    }
+  ],
+
+  // OPTIONAL FIELDS:
+  "coupon_code": "SAVE10",
+  "discount": 0,
+  
+  // PAYMENT (Optional - can be none):
+  "payment_mode": "none",
+  "payment_amount": 0,
+  "payments": [],
+  
+  // TIMESTAMPS:
+  "billing_timestamp": "2025-09-26T16:00:00.000Z"
+}
+
+SUCCESS RESPONSE (201 Created):
+{
+  "success": true,
+  "message": "Bill held successfully",
+  "data": {
+    "held_id": "550e8400-e29b-41d4-a716-446655440050",
+    "created_at": "2025-09-26T16:00:15.789Z",
+    "customer_summary": "Anita Singh (+919876543210)",
+    "item_count": 1,
+    "amount_estimate": 590.00
+  }
+}
+
+ERROR RESPONSES:
+
+400 Bad Request:
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "customer",
+      "message": "Either customer_id or customer details required"
+    }
+  ]
+}
+
+=================================================
+ENDPOINT 4: LIST HELD BILLS
+=================================================
+
+METHOD: GET
+PATH: /api/v1/billing/{storeId}/bills/held
+
+REQUEST HEADERS:
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+SUCCESS RESPONSE (200 OK):
+{
+  "success": true,
+  "data": {
+    "held": [
+      {
+        "held_id": "550e8400-e29b-41d4-a716-446655440050",
+        "created_at": "2025-09-26T16:00:15.789Z",
+        "customer_summary": "Anita Singh (+919876543210)",
+        "item_count": 1,
+        "amount_estimate": 590.00
+      },
+      {
+        "held_id": "550e8400-e29b-41d4-a716-446655440051",
+        "created_at": "2025-09-26T16:15:22.123Z",
+        "customer_summary": "Rajesh Kumar (+919876543212)",
+        "item_count": 3,
+        "amount_estimate": 1250.75
+      }
+    ]
+  }
+}
+
+=================================================
+ENDPOINT 5: GET HELD BILL
+=================================================
+
+METHOD: GET  
+PATH: /api/v1/billing/{storeId}/bills/held/{heldId}
+
+REQUEST HEADERS:
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+SUCCESS RESPONSE (200 OK):
+{
+  "success": true,
+  "data": {
+    "held": {
+      "held_id": "550e8400-e29b-41d4-a716-446655440050",
+      "created_at": "2025-09-26T16:00:15.789Z",
+      "payload": {
+        // Original request data from hold operation
+        "customer": {
+          "name": "Anita Singh",
+          "contact_no": "+919876543210",
+          "gender": "Female",
+          "address": "456 Park Avenue"
+        },
+        "items": [
+          {
+            "line_no": 1,
+            "type": "service",
+            "id": "550e8400-e29b-41d4-a716-446655440001",
+            "staff_id": "550e8400-e29b-41d4-a716-446655440002",
+            "qty": 1,
+            "discount_type": "percent",
+            "discount_value": 0,
+            "cgst": 9,
+            "sgst": 9
+          }
+        ],
+        "coupon_code": "SAVE10",
+        "discount": 0,
+        "payment_mode": "none",
+        "payment_amount": 0,
+        "payments": [],
+        "billing_timestamp": "2025-09-26T16:00:00.000Z"
+      },
+      "suggested_number": "INV202500001236"
+    }
+  }
+}
+
+ERROR RESPONSES:
+
+404 Not Found:
+{
+  "success": false,
+  "message": "Held bill not found",
+  "error": "HELD_BILL_NOT_FOUND"
+}
+
+=================================================
+COMMON ERROR CODES AND MEANINGS
+=================================================
+
+HTTP STATUS CODES:
+- 200: Success (GET requests)
+- 201: Created (POST requests)
+- 400: Bad Request (validation errors, invalid parameters)
+- 401: Unauthorized (missing or invalid JWT token)
+- 403: Forbidden (insufficient permissions, store access denied)
+- 404: Not Found (resource does not exist)
+- 409: Conflict (duplicate idempotency key, business rule violation)
+- 429: Too Many Requests (rate limiting)
+- 500: Internal Server Error (unexpected server error)
+
+ERROR RESPONSE FORMAT:
+{
+  "success": false,
+  "message": "Human readable error message",
+  "error": "ERROR_CODE_CONSTANT",
+  "errors": [                    // For validation errors
+    {
+      "field": "field_name",
+      "message": "Field specific error",
+      "value": "invalid_value"
+    }
+  ],
+  "details": {                   // Additional error context
+    "key": "value"
+  }
+}
+
+=================================================
+VALIDATION RULES SUMMARY
+=================================================
+
+CUSTOMER VALIDATION:
+- Must provide either customer_id OR customer object (not both)
+- customer.name: required, 1-255 characters
+- customer.contact_no: required, E.164 format (+countrycode + number)
+- customer.gender: optional, enum (Male|Female|Other)
+- customer.address: optional, max 500 characters
+- customer.email: optional, valid email format
+
+ITEMS VALIDATION:
+- At least 1 item required
+- line_no: required, unique integers within bill
+- type: required, enum (service|product|membership)
+- id: required, valid UUID of catalog item
+- staff_id: optional, valid UUID of staff member
+- qty: required, positive integer
+- discount_type: optional, enum (percent|flat)
+- discount_value: optional, non-negative number
+- cgst/sgst: required, non-negative numbers (tax rates as percentages)
+
+PAYMENT VALIDATION:
+- payment_mode: required, enum (cash|card|upi|wallet|split|none)
+- For mode "none": payment_amount = 0, payments = []
+- For mode "split": payments array required, sum must equal payment_amount
+- For single modes: payments array with 1 item, amount = payment_amount
+- payment.mode: required, enum (cash|card|upi|wallet)
+- payment.amount: required, positive number
+- payment.timestamp: required, valid ISO 8601 datetime
+
+GENERAL VALIDATION:
+- All UUIDs must be valid UUID v4 format
+- All timestamps must be ISO 8601 format
+- All monetary amounts must be non-negative decimal numbers
+- Phone numbers must be E.164 format with country code
+- Discount values cannot exceed item/bill amounts
+
+=================================================
+TECHNICAL NOTES
+=================================================
+
+TAX CALCULATIONS:
+- Tax rates provided as percentages (9 = 9%)
+- CGST and SGST calculated separately
+- Tax applied on (base_amount - line_discount)
+- Bill-level discount applied after tax calculations
+
+IDEMPOTENCY:
+- Use unique Idempotency-Key header for save bill requests
+- Prevents duplicate bill creation on network retries
+- Key format recommendation: "bill-{timestamp}-{random}"
+
+PAGINATION:
+- Default page size: 20 items
+- Maximum page size: 100 items  
+- Zero-indexed pagination (page 1 = first page)
+- Total count includes all matching records
+
+SEARCH FUNCTIONALITY:
+- Case-insensitive search across customer name, phone, invoice number
+- Partial match support
+- Special characters in search terms are escaped
+
+FILTERING:
+- Date filters use inclusive ranges
+- Status filter matches exact payment status
+- All filters can be combined
+
+SORTING:
+- date_asc: oldest bills first
+- date_desc: newest bills first (default)
+- amount_asc: lowest amount first
+- amount_desc: highest amount first
+
+=================================================

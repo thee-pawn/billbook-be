@@ -1,0 +1,5232 @@
+{
+	"info": {
+		"_postman_id": "billbook-complete-api-collection",
+		"name": "Billbook Complete API Collection",
+		"description": "Complete collection for all Billbook Backend APIs including Authentication, Stores, Store Users, Shifts, Special Shifts, Staff Management with Banking Details, Staff Payments with Breakdown, and File Upload",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication APIs",
+			"item": [
+				{
+					"name": "User Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.tempToken) {",
+									"        pm.environment.set('temp_token', response.data.tempToken);",
+									"        pm.environment.set('user_id', response.data.user.id);",
+									"        pm.environment.set('phone_number', response.data.user.phone_number);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"phoneNumber\": \"+1234567890\",\n  \"email\": \"john@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user. Returns temporary token for OTP verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Registration OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.authToken) {",
+									"        pm.environment.set('auth_token', response.data.authToken);",
+									"        pm.environment.set('user_id', response.data.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"{{phone_number}}\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/otp/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								"otp",
+								"verify"
+							]
+						},
+						"description": "Verify OTP sent during registration."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success) {",
+									"        console.log('Password set successfully');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/password-set",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								"password-set"
+							]
+						},
+						"description": "Set password to complete registration after OTP verification."
+					},
+					"response": []
+				},
+				{
+					"name": "User Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.authToken) {",
+									"        pm.environment.set('auth_token', response.data.authToken);",
+									"        pm.environment.set('user_id', response.data.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with phone and password. Token is automatically saved."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with OTP (Send OTP)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/otp/send",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								"otp",
+								"send"
+							]
+						},
+						"description": "Send OTP for password-less login."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with OTP (Verify OTP)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.authToken) {",
+									"        pm.environment.set('auth_token', response.data.authToken);",
+									"        pm.environment.set('user_id', response.data.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"+1234567890\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/otp/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								"otp",
+								"verify"
+							]
+						},
+						"description": "Verify OTP for password-less login."
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Send OTP for password reset."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"oldPassword\": \"oldpassword123\",\n  \"password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset password with current password verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Get authenticated user's profile information."
+					},
+					"response": []
+				},
+				{
+					"name": "Resend OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"attempts\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/otp/resend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"otp",
+								"resend"
+							]
+						},
+						"description": "Resend OTP for registration, login, or password reset. Attempts parameter tracks retry count."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP (General)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.authToken) {",
+									"        pm.environment.set('auth_token', response.data.authToken);",
+									"        pm.environment.set('user_id', response.data.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"{{phone_number}}\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/otp/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"otp",
+								"verify"
+							]
+						},
+						"description": "General OTP verification endpoint for various flows."
+					},
+					"response": []
+				},
+				{
+					"name": "Enable MFA",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{user_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/enable-mfa",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"enable-mfa"
+							]
+						},
+						"description": "Enable multi-factor authentication for the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Password (Standalone)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/password-set",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"password-set"
+							]
+						},
+						"description": "Set password (standalone endpoint, different from registration flow)."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout from current session."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout All Sessions",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout-all"
+							]
+						},
+						"description": "Logout from all sessions."
+					},
+					"response": []
+				}
+			],
+			"description": "Complete user authentication and account management APIs - 15 endpoints"
+		},
+		{
+			"name": "Store Management",
+			"item": [
+				{
+					"name": "Create Store",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.store) {",
+									"        pm.environment.set('store_id', response.data.store.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My Awesome Store\",\n  \"mobile_no\": \"+1234567890\",\n  \"whatsapp_no\": \"+1234567890\",\n  \"contact_email_id\": \"store@example.com\",\n  \"reporting_email_id\": \"reports@example.com\",\n  \"gst_number\": \"22AAAAA0000A1Z5\",\n  \"tax_billing\": true,\n  \"business_category\": \"Retail\",\n  \"instagram_link\": \"https://instagram.com/mystore\",\n  \"facebook_link\": \"https://facebook.com/mystore\",\n  \"google_maps_link\": \"https://maps.google.com/?q=mystore\",\n  \"address_line_1\": \"123 Main Street\",\n  \"locality\": \"Downtown\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"country\": \"USA\",\n  \"pincode\": \"10001\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores"
+							]
+						},
+						"description": "Create a new store. Creator becomes owner automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All User Stores",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "role",
+									"value": "owner",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all stores user has access to with pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Store",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}"
+							]
+						},
+						"description": "Get details of a specific store."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Store",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Store Name\",\n  \"mobile_no\": \"+1234567891\",\n  \"business_category\": \"Electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}"
+							]
+						},
+						"description": "Update store details. Only owners and managers can update."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Store Logo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "logo",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/logo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"logo"
+							]
+						},
+						"description": "Upload a logo for the store. Only owners and managers can upload. Accepts image files (jpeg, png, gif) up to 5MB."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Logo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/logo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"logo"
+							]
+						},
+						"description": "Get the store's logo image file. User must have access to the store."
+					},
+					"response": []
+				}
+			],
+			"description": "Store creation, management, and information retrieval APIs"
+		},
+		{
+			"name": "Store User Management",
+			"item": [
+				{
+					"name": "Add User to Store",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{target_user_id}}\",\n  \"role\": \"employee\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"users"
+							]
+						},
+						"description": "Add a user to store with specific role (owner, manager, employee, member)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/users?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "role",
+									"value": "employee",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all users associated with a store with optional role filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"manager\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/users/{{target_user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"users",
+								"{{target_user_id}}"
+							]
+						},
+						"description": "Update a user's role in the store."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User from Store",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/users/{{target_user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"users",
+								"{{target_user_id}}"
+							]
+						},
+						"description": "Remove a user from the store."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing users within stores and their roles"
+		},
+		{
+			"name": "Regular Shifts Management",
+			"item": [
+				{
+					"name": "Create Shift",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.shift) {",
+									"        pm.environment.set('shift_id', response.data.shift.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"monday\",\n  \"opening_time\": \"09:00\",\n  \"closing_time\": \"18:00\",\n  \"is_24_hrs_open\": false,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a regular weekly shift for a specific day."
+					},
+					"response": []
+				},
+				{
+					"name": "Create 24 Hour Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"saturday\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a 24-hour shift for a specific day."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Closed Day Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"sunday\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a closed day shift using the is_closed field."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Store Shifts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Get all weekly shifts for a store, ordered by day."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Shift",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Get details of a specific shift by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": \"10:00\",\n  \"closing_time\": \"19:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update shift details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update to 24 Hour Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update a shift to be 24 hours open."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift to Closed",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update a shift to be closed (store closed on this day)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Shift",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Delete a shift."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Bulk Shifts (Weekly)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.shifts) {",
+									"        pm.environment.set('bulk_shifts_count', response.data.count);",
+									"        if (response.data.shifts.length > 0) {",
+									"            pm.environment.set('first_bulk_shift_id', response.data.shifts[0].id);",
+									"        }",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shifts\": [\n    {\n      \"day\": \"monday\",\n      \"opening_time\": \"09:00\",\n      \"closing_time\": \"18:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"tuesday\",\n      \"opening_time\": \"09:00\",\n      \"closing_time\": \"18:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"wednesday\",\n      \"opening_time\": \"09:00\",\n      \"closing_time\": \"18:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"thursday\",\n      \"opening_time\": \"09:00\",\n      \"closing_time\": \"18:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"friday\",\n      \"opening_time\": \"09:00\",\n      \"closing_time\": \"18:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"saturday\",\n      \"opening_time\": \"10:00\",\n      \"closing_time\": \"16:00\",\n      \"is_24_hrs_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"day\": \"sunday\",\n      \"opening_time\": null,\n      \"closing_time\": null,\n      \"is_24_hrs_open\": false,\n      \"is_closed\": true\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"bulk"
+							]
+						},
+						"description": "Create multiple shifts for different days of the week in a single request. Perfect for setting up complete weekly schedule."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Availability",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/availability?date=2025-12-25",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "date",
+									"value": "2025-12-25",
+									"description": "Date in YYYY-MM-DD format"
+								}
+							]
+						},
+						"description": "Get store availability (opening/closing times) for a specific date. Checks special shifts first, then regular weekly shifts."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Availability - Regular Day",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/availability?date=2025-08-15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "date",
+									"value": "2025-08-15",
+									"description": "Regular Friday - will use weekly shift schedule"
+								}
+							]
+						},
+						"description": "Get store availability for a regular day (no special shift defined). Will return regular weekly shift information."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Availability - No Shift Defined",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/availability?date=2025-08-17",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "date",
+									"value": "2025-08-17",
+									"description": "Sunday - if no shift defined, store is closed"
+								}
+							]
+						},
+						"description": "Get store availability when no shift is defined for the day. Store will be marked as closed."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing regular weekly store operating hours"
+		},
+		{
+			"name": "Special Shifts Management",
+			"item": [
+				{
+					"name": "Create Special Shift",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.special_shift) {",
+									"        pm.environment.set('special_shift_id', response.data.special_shift.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-25\",\n  \"name\": \"Christmas Day\",\n  \"opening_time\": \"10:00\",\n  \"closing_time\": \"16:00\",\n  \"is_24_hours_open\": false,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create special operating hours for a specific date."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Special Closed Day",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-01-01\",\n  \"name\": \"New Year's Day\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create a special closed day using the is_closed field."
+					},
+					"response": []
+				},
+				{
+					"name": "Create 24 Hour Special Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-31\",\n  \"name\": \"New Year's Eve\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create a 24-hour special shift for a specific date."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Special Shifts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all special shifts for a store with pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Special Shifts with Date Filter",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts?from_date=2025-12-01&to_date=2025-12-31&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							],
+							"query": [
+								{
+									"key": "from_date",
+									"value": "2025-12-01"
+								},
+								{
+									"key": "to_date",
+									"value": "2025-12-31"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get special shifts filtered by date range."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Special Shift",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Get details of a specific special shift by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Christmas Eve\",\n  \"opening_time\": \"09:00\",\n  \"closing_time\": \"17:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update special shift details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift Date",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-26\",\n  \"name\": \"Boxing Day\",\n  \"opening_time\": \"11:00\",\n  \"closing_time\": \"15:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update both the date and hours of a special shift."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift to Closed",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update a special shift to be closed (store closed on this specific date)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Special Shift",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Delete a special shift."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Bulk Special Shifts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.special_shifts) {",
+									"        pm.environment.set('bulk_special_shifts_count', response.data.count);",
+									"        if (response.data.special_shifts.length > 0) {",
+									"            pm.environment.set('first_bulk_special_shift_id', response.data.special_shifts[0].id);",
+									"        }",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"special_shifts\": [\n    {\n      \"date\": \"2025-12-25\",\n      \"name\": \"Christmas Day\",\n      \"opening_time\": \"10:00\",\n      \"closing_time\": \"14:00\",\n      \"is_24_hours_open\": false,\n      \"is_closed\": false\n    },\n    {\n      \"date\": \"2025-12-26\",\n      \"name\": \"Boxing Day\",\n      \"opening_time\": null,\n      \"closing_time\": null,\n      \"is_24_hours_open\": false,\n      \"is_closed\": true\n    },\n    {\n      \"date\": \"2025-01-01\",\n      \"name\": \"New Year's Day\",\n      \"opening_time\": \"12:00\",\n      \"closing_time\": \"20:00\",\n      \"is_24_hours_open\": false,\n      \"is_closed\": false\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"bulk"
+							]
+						},
+						"description": "Create multiple special shifts for different dates in a single request. Perfect for setting up holiday hours and special events."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing special date-specific store operating hours"
+		},
+		{
+			"name": "Receipt Settings Management",
+			"item": [
+				{
+					"name": "Get Receipt Settings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.receipt_settings && response.data.receipt_settings.id) {",
+									"        pm.environment.set('receipt_settings_id', response.data.receipt_settings.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Get receipt customization settings for a store. Returns default settings if none are configured."
+					},
+					"response": []
+				},
+				{
+					"name": "Create/Update Receipt Settings (Complete)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"logo\": true,\n  \"gst_no\": true,\n  \"staff_name\": false,\n  \"loyalty_points\": true,\n  \"wallet_balance\": false,\n  \"payment_method\": true,\n  \"date_time\": true,\n  \"customer_contact\": true,\n  \"discount\": true,\n  \"notes\": [\n    \"Thank you for shopping with us!\",\n    \"All sales are final\",\n    \"Visit us again for more deals!\"\n  ],\n  \"phone_numbers\": \"+1234567890,+0987654321,+1122334455\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Create new receipt settings or update all settings if they already exist."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Receipt Settings (Partial)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"logo\": false,\n  \"discount\": false,\n  \"notes\": [\n    \"Visit us again soon!\",\n    \"Follow us on social media\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Partially update existing receipt settings. Only provided fields will be updated."
+					},
+					"response": []
+				},
+				{
+					"name": "Enable All Receipt Features",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"logo\": true,\n  \"gst_no\": true,\n  \"staff_name\": true,\n  \"loyalty_points\": true,\n  \"wallet_balance\": true,\n  \"payment_method\": true,\n  \"date_time\": true,\n  \"customer_contact\": true,\n  \"discount\": true,\n  \"notes\": [\n    \"Premium Receipt\",\n    \"Complete transaction details included\",\n    \"Keep this receipt for warranty claims\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Enable all receipt features for comprehensive receipt printing."
+					},
+					"response": []
+				},
+				{
+					"name": "Minimal Receipt Settings",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"logo\": false,\n  \"gst_no\": false,\n  \"staff_name\": false,\n  \"loyalty_points\": false,\n  \"wallet_balance\": false,\n  \"payment_method\": true,\n  \"date_time\": true,\n  \"customer_contact\": false,\n  \"discount\": false,\n  \"notes\": [\n    \"Simple receipt\",\n    \"Thank you!\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Create minimal receipt settings with only essential information."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Receipt Settings (Reset to Defaults)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/receipt-settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"receipt-settings"
+							]
+						},
+						"description": "Delete custom receipt settings and revert to default settings. Only store owners can perform this action."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing receipt customization and printing settings"
+		},
+		{
+			"name": "Products Management",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}?page=1&limit=10&search=&category=&company=&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "category",
+									"value": ""
+								},
+								{
+									"key": "company",
+									"value": ""
+								},
+								{
+									"key": "batch_no",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "low_stock",
+									"value": "false",
+									"disabled": true
+								},
+								{
+									"key": "expiring_soon",
+									"value": "false",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all products for a specific store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Product",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}",
+								"{{product_id}}"
+							]
+						},
+						"description": "Retrieve details of a specific product by store ID and product ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+								"raw": "{\n  \"name\": \"Premium Coffee Beans\",\n  \"company\": \"Coffee Co.\",\n  \"cost_price\": 25.50,\n  \"selling_price\": 35.00,\n  \"usage\": \"Beverage\",\n  \"category\": \"Food & Beverages\",\n  \"qty\": 100,\n  \"prod_qty\": 500,\n  \"prod_qty_unit\": \"grams\",\n  \"mfg_date\": \"2024-01-15\",\n  \"exp_date\": \"2025-01-15\",\n  \"notification_qty\": 10,\n  \"expiry_notification_days\": 30,\n  \"hsn_sac_code\": \"09011100\",\n  \"tax_prcnt\": 18.00,\n  \"description\": \"Premium arabica coffee beans sourced from Brazil\",\n  \"batch_no\": \"CF2024001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new product in the specified store. All users with store access can create products."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premium Coffee Beans - Updated\",\n  \"selling_price\": 38.00,\n  \"qty\": 85,\n  \"description\": \"Premium arabica coffee beans sourced from Brazil - Updated description\",\n  \"notification_qty\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}",
+								"{{product_id}}"
+							]
+						},
+						"description": "Update an existing product. Only the fields provided in the request body will be updated."
+					},
+					"response": []
+				},
+				{
+					"name": "Decrease Product Quantity",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}/{{product_id}}/decrease-quantity",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}",
+								"{{product_id}}",
+								"decrease-quantity"
+							]
+						},
+						"description": "Decrease the quantity of a specific product. Quantity will not go below 0. Useful for sales or inventory adjustments."
+					},
+					"response": []
+				},
+				{
+					"name": "Increase Product Quantity",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}/{{product_id}}/increase-quantity",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}",
+								"{{product_id}}",
+								"increase-quantity"
+							]
+						},
+						"description": "Increase the quantity of a specific product. Useful for restocking or inventory adjustments."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products/{{store_id}}/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products",
+								"{{store_id}}",
+								"{{product_id}}"
+							]
+						},
+						"description": "Delete a specific product. Only store owners and managers can delete products."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing product inventory, including CRUD operations and quantity management"
+		},
+		{
+			"name": "Services Management",
+			"item": [
+				{
+					"name": "Get All Services",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}?page=1&limit=10&search=&category=&gender=&status=&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "category",
+									"value": ""
+								},
+								{
+									"key": "gender",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all services for a specific store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Service",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}/{{service_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}",
+								"{{service_id}}"
+							]
+						},
+						"description": "Retrieve details of a specific service including product usage information."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service with Product Usage",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premium Hair Treatment\",\n  \"reminder\": null,\n  \"category\": \"Hair Care\",\n  \"description\": \"Professional hair treatment with premium products\",\n  \"gender\": \"unisex\",\n  \"price\": 117.50,\n  \"duration\": 45,\n  \"tax_prcnt\": 18.0,\n  \"status\": \"active\",\n  \"productUsage\": [\n    {\n      \"productId\": \"{{product_id}}\",\n      \"qty\": 50,\n      \"unit\": \"ml\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new service with optional product usage. The service can define which products are consumed during the service."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Service",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premium Hair Treatment - Updated\",\n  \"price\": 125.00,\n  \"duration\": 50,\n  \"description\": \"Enhanced professional hair treatment with premium products\",\n  \"status\": \"active\",\n  \"productUsage\": [\n    {\n      \"productId\": \"{{product_id}}\",\n      \"qty\": 60,\n      \"unit\": \"ml\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}/{{service_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}",
+								"{{service_id}}"
+							]
+						},
+						"description": "Update an existing service. Can update service details and/or product usage. Only provided fields will be updated."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Service",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}/{{service_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}",
+								"{{service_id}}"
+							]
+						},
+						"description": "Delete a specific service and all associated product usage. Only store owners and managers can delete services."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service - Medical Example",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Health Consultation\",\n  \"reminder\": 7,\n  \"category\": \"medical\",\n  \"description\": \"General health consultation with basic examination\",\n  \"gender\": \"unisex\",\n  \"price\": 250.00,\n  \"duration\": 30,\n  \"tax_prcnt\": 5.0,\n  \"status\": \"active\",\n  \"productUsage\": [\n    {\n      \"productId\": \"{{product_id}}\",\n      \"qty\": 1,\n      \"unit\": \"piece\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}"
+							]
+						},
+						"description": "Example of creating a medical service with reminder and product usage."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service - Beauty Example",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Facial Treatment\",\n  \"reminder\": null,\n  \"category\": \"beauty\",\n  \"description\": \"Rejuvenating facial treatment for glowing skin\",\n  \"gender\": \"female\",\n  \"price\": 150.00,\n  \"duration\": 60,\n  \"tax_prcnt\": 18.0,\n  \"status\": \"active\",\n  \"productUsage\": [\n    {\n      \"productId\": \"{{product_id}}\",\n      \"qty\": 30,\n      \"unit\": \"ml\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}"
+							]
+						},
+						"description": "Example of creating a beauty service for female customers with product consumption."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Inactive Service Example",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Seasonal Service\",\n  \"reminder\": null,\n  \"category\": \"special\",\n  \"description\": \"Service only available during specific seasons\",\n  \"gender\": \"unisex\",\n  \"price\": 200.00,\n  \"duration\": 90,\n  \"tax_prcnt\": 18.0,\n  \"status\": \"inactive\",\n  \"productUsage\": []\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}"
+							]
+						},
+						"description": "Example of creating an inactive service that can be activated later."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Service Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"inactive\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/services/{{store_id}}/{{service_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"services",
+								"{{store_id}}",
+								"{{service_id}}"
+							]
+						},
+						"description": "Example of updating only the service status to deactivate a service."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing services with product usage tracking. Services can define which products are consumed during service delivery."
+		},
+		{
+			"name": "Membership Management",
+			"item": [
+				{
+					"name": "Get All Memberships",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}?page=1&limit=10&search=&status=&min_price=&max_price=&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "min_price",
+									"value": ""
+								},
+								{
+									"key": "max_price",
+									"value": ""
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all memberships for a specific store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Membership",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}/{{membership_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}",
+								"{{membership_id}}"
+							]
+						},
+						"description": "Retrieve details of a specific membership including all discounts, service packages, and loyalty points configuration."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Premium Membership",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premium Membership\",\n  \"description\": \"Premium membership with exclusive benefits and discounts\",\n  \"price\": 299.99,\n  \"walletBalance\": 500.00,\n  \"validity\": {\n    \"years\": 1,\n    \"months\": 0,\n    \"days\": 0\n  },\n  \"overallDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 10.00\n  },\n  \"serviceDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 15.00,\n    \"includedServices\": [\"{{service_id}}\"],\n    \"includeAllServices\": false,\n    \"excludedServices\": []\n  },\n  \"productDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 12.00,\n    \"includedProducts\": [\"{{product_id}}\"],\n    \"includeAllProducts\": false,\n    \"excludedProducts\": []\n  },\n  \"servicePackage\": {\n    \"servicePackageId\": null,\n    \"services\": [\n      {\n        \"serviceId\": \"{{service_id}}\",\n        \"quantityType\": \"sessions\",\n        \"quantityValue\": 10\n      }\n    ]\n  },\n  \"loyaltyPoints\": {\n    \"oneTimeBonus\": 2000,\n    \"servicePointsMultiplier\": 2.0,\n    \"productPointsMultiplier\": 1.5,\n    \"membershipPointsMultiplier\": 2.5\n  },\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new premium membership with comprehensive benefits including discounts, service packages, and loyalty points."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Basic Membership",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Basic Membership\",\n  \"description\": \"Entry-level membership with basic benefits\",\n  \"price\": 99.99,\n  \"walletBalance\": 150.00,\n  \"validity\": {\n    \"years\": 0,\n    \"months\": 6,\n    \"days\": 0\n  },\n  \"overallDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 5.00\n  },\n  \"serviceDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 8.00,\n    \"includedServices\": [],\n    \"includeAllServices\": true,\n    \"excludedServices\": []\n  },\n  \"loyaltyPoints\": {\n    \"oneTimeBonus\": 500,\n    \"servicePointsMultiplier\": 1.2,\n    \"productPointsMultiplier\": 1.1,\n    \"membershipPointsMultiplier\": 1.3\n  },\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a basic membership with simple benefits and universal service discounts."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Membership",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premium Membership - Updated\",\n  \"price\": 349.99,\n  \"overallDiscount\": {\n    \"type\": \"percentage\",\n    \"value\": 12.00\n  },\n  \"loyaltyPoints\": {\n    \"oneTimeBonus\": 2500,\n    \"servicePointsMultiplier\": 2.2\n  },\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}/{{membership_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}",
+								"{{membership_id}}"
+							]
+						},
+						"description": "Update an existing membership. Can update any field including discounts, validity, and loyalty points."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Membership Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"inactive\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}/{{membership_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}",
+								"{{membership_id}}"
+							]
+						},
+						"description": "Update only the membership status to activate or deactivate a membership plan."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Membership",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships/{{store_id}}/{{membership_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"memberships",
+								"{{store_id}}",
+								"{{membership_id}}"
+							]
+						},
+						"description": "Delete a membership plan and all associated configurations. Only store owners can delete memberships."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing store membership plans with complex discount structures, service packages, loyalty points, and validity periods."
+		},
+		{
+			"name": "Service Packages Management",
+			"item": [
+				{
+					"name": "Get All Service Packages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-packages/{{store_id}}?page=1&limit=10&search=&status=&min_price=&max_price=&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"service-packages",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "min_price",
+									"value": ""
+								},
+								{
+									"key": "max_price",
+									"value": ""
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all service packages for a specific store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Service Package by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-packages/{{store_id}}/{{package_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"service-packages",
+								"{{store_id}}",
+								"{{package_id}}"
+							]
+						},
+						"description": "Retrieve detailed information about a specific service package including all included services."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service Package",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"packageName\": \"Premium Spa Package\",\n  \"description\": \"Comprehensive spa treatment package with multiple services\",\n  \"price\": 299.99,\n  \"validity\": {\n    \"years\": 0,\n    \"months\": 3,\n    \"days\": 0\n  },\n  \"services\": [\n    {\n      \"serviceId\": 1,\n      \"quantityType\": \"sessions\",\n      \"qty\": 3,\n      \"type\": \"included\"\n    },\n    {\n      \"serviceId\": 2,\n      \"quantityType\": \"sessions\",\n      \"qty\": 2,\n      \"type\": \"discount\",\n      \"discountValue\": 20.50\n    }\n  ],\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service-packages/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"service-packages",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new service package with bundled services and pricing configuration."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Service Package",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"packageName\": \"Updated Premium Spa Package\",\n  \"description\": \"Updated description for comprehensive spa treatment package\",\n  \"price\": 349.99,\n  \"validity\": {\n    \"years\": 0,\n    \"months\": 6,\n    \"days\": 0\n  },\n  \"services\": [\n    {\n      \"serviceId\": 1,\n      \"quantityType\": \"sessions\",\n      \"qty\": 5,\n      \"type\": \"included\"\n    },\n    {\n      \"serviceId\": 2,\n      \"quantityType\": \"sessions\",\n      \"qty\": 3,\n      \"type\": \"discount\",\n      \"discountValue\": 25.00\n    },\n    {\n      \"serviceId\": 3,\n      \"quantityType\": \"Hours\",\n      \"qty\": 2,\n      \"type\": \"included\"\n    }\n  ],\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service-packages/{{store_id}}/{{package_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"service-packages",
+								"{{store_id}}",
+								"{{package_id}}"
+							]
+						},
+						"description": "Update an existing service package's details, pricing, and service configuration."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Service Package",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-packages/{{store_id}}/{{package_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"service-packages",
+								"{{store_id}}",
+								"{{package_id}}"
+							]
+						},
+						"description": "Delete a service package and all associated service configurations. Only store owners can delete service packages."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing service packages with bundled services, flexible pricing models, and validity periods. Supports both included services and discounted services within packages."
+		},
+		{
+			"name": "Loyalty Points Configuration",
+			"item": [
+				{
+					"name": "Get Loyalty Points Configuration",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/loyalty-points-configuration/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"loyalty-points-configuration",
+								"{{store_id}}"
+							]
+						},
+						"description": "Retrieve the loyalty points configuration for a specific store."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Loyalty Points Configuration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"loyaltyPointsConversionRate\": 200,\n  \"serviceLoyaltyPoints\": 100,\n  \"productLoyaltyPoints\": 100,\n  \"membershipLoyaltyPoints\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/loyalty-points-configuration/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"loyalty-points-configuration",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new loyalty points configuration for a store."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Loyalty Points Configuration",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"loyaltyPointsConversionRate\": 250,\n  \"serviceLoyaltyPoints\": 150,\n  \"productLoyaltyPoints\": 75,\n  \"membershipLoyaltyPoints\": 200\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/loyalty-points-configuration/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"loyalty-points-configuration",
+								"{{store_id}}"
+							]
+						},
+						"description": "Update the loyalty points configuration for a store. All fields are optional."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Loyalty Points Configuration",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/loyalty-points-configuration/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"loyalty-points-configuration",
+								"{{store_id}}"
+							]
+						},
+						"description": "Delete the loyalty points configuration for a store. Only store owners can delete configuration."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing store-specific loyalty points configuration including conversion rates and points awarded for different transaction types."
+		},
+		{
+			"name": "Coupons Management",
+			"item": [
+				{
+					"name": "Get All Coupons",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}?page=1&limit=10&search=&status=&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all coupons for a specific store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Coupon by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}/{{coupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}",
+								"{{coupon_id}}"
+							]
+						},
+						"description": "Retrieve detailed information about a specific coupon including all inclusions."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"couponCode\": \"SUMMER25\",\n  \"description\": \"Summer discount coupon\",\n  \"validForm\": \"2025-07-15\",\n  \"validTill\": \"2025-10-15\",\n  \"discount\": {\n    \"type\": \"percentage\",\n    \"value\": 5.00\n  },\n  \"conditions\": {\n    \"minimumSpend\": 500.00,\n    \"maximumDisc\": 200.00,\n    \"limit\": 5,\n    \"limitRefereshDays\": 30\n  },\n  \"includedServices\": {\n    \"allIncluded\": true\n  },\n  \"includedProducts\": {\n    \"allIncluded\": false,\n    \"inclusions\": [\n      \"550e8400-e29b-41d4-a716-446655440000\",\n      \"550e8400-e29b-41d4-a716-446655440001\"\n    ]\n  },\n  \"includedMemberships\": {\n    \"allIncluded\": false,\n    \"inclusions\": [\n      \"550e8400-e29b-41d4-a716-446655440002\",\n      \"550e8400-e29b-41d4-a716-446655440003\"\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new coupon with discount rules and inclusion conditions."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Coupon",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"couponCode\": \"SUMMER30\",\n  \"description\": \"Updated summer discount coupon\",\n  \"discount\": {\n    \"type\": \"percentage\",\n    \"value\": 10.00\n  },\n  \"conditions\": {\n    \"minimumSpend\": 300.00,\n    \"maximumDisc\": 150.00,\n    \"limit\": 3\n  },\n  \"includedServices\": {\n    \"allIncluded\": false,\n    \"inclusions\": [\n      \"550e8400-e29b-41d4-a716-446655440004\"\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}/{{coupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}",
+								"{{coupon_id}}"
+							]
+						},
+						"description": "Update an existing coupon's details and conditions. All fields are optional."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Coupon",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}/{{coupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}",
+								"{{coupon_id}}"
+							]
+						},
+						"description": "Delete a coupon and all associated inclusions. Only store owners can delete coupons."
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"couponCode\": \"SUMMER25\",\n  \"orderAmount\": 750.00,\n  \"serviceIds\": [\n    \"550e8400-e29b-41d4-a716-446655440000\"\n  ],\n  \"productIds\": [\n    \"550e8400-e29b-41d4-a716-446655440001\"\n  ],\n  \"membershipIds\": []\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/coupons/{{store_id}}/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coupons",
+								"{{store_id}}",
+								"validate"
+							]
+						},
+						"description": "Validate a coupon for a specific order and calculate discount amount."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing store coupons with flexible discount rules, validity periods, usage limits, and inclusion/exclusion conditions for services, products, and memberships."
+		},
+		{
+			"name": "File Upload APIs",
+			"item": [
+				{
+					"name": "Upload Single File",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/upload/single",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"upload",
+								"single"
+							]
+						},
+						"description": "Upload a single file (images: JPEG, PNG, GIF; documents: PDF). Max size: 5MB."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Multiple Files",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/upload/multiple",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"upload",
+								"multiple"
+							]
+						},
+						"description": "Upload multiple files (up to 10 files). Same file restrictions as single upload."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete File",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"filename\": \"uploads/filename.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/upload/delete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"upload",
+								"delete"
+							]
+						},
+						"description": "Delete a file from S3 storage using its filename/key."
+					},
+					"response": []
+				}
+			],
+			"description": "File upload and management APIs for S3 storage"
+		},
+		{
+			"name": "Customer Management APIs",
+			"item": [
+				{
+					"name": "Get All Customers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.customers && response.data.customers.length > 0) {",
+									"        pm.environment.set('customer_id', response.data.customers[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}?page=1&limit=10&search=&gender=&status=active&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "gender",
+									"value": ""
+								},
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all customers for a store with pagination, search, and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}"
+							]
+						},
+						"description": "Get a specific customer by ID with all associated memberships and service packages."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Customer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.customer) {",
+									"        pm.environment.set('customer_id', response.data.customer.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"+919876543210\",\n  \"name\": \"John Smith\",\n  \"gender\": \"male\",\n  \"birthday\": \"15/08\",\n  \"anniversary\": \"22/12\",\n  \"address\": \"123 Main Street, City, State 12345\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new customer for the store."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Smith Updated\",\n  \"gender\": \"male\",\n  \"birthday\": \"15/08\",\n  \"anniversary\": \"22/12\",\n  \"address\": \"456 Updated Street, New City, State 67890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}"
+							]
+						},
+						"description": "Update customer information."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Customer",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}"
+							]
+						},
+						"description": "Soft delete a customer (sets status to inactive)."
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Customer Loyalty Points",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"loyalty\",\n  \"operation\": \"add\",\n  \"amount\": 100,\n  \"reason\": \"Bonus points for birthday\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}/adjustment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}",
+								"adjustment"
+							]
+						},
+						"description": "Add or deduct loyalty points from customer account."
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Customer Wallet Balance",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"wallet\",\n  \"operation\": \"add\",\n  \"amount\": 50.00,\n  \"reason\": \"Wallet top-up\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}/adjustment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}",
+								"adjustment"
+							]
+						},
+						"description": "Add or deduct money from customer wallet balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Customer Dues",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"dues\",\n  \"operation\": \"add\",\n  \"amount\": 25.00,\n  \"reason\": \"Service charge added\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}/adjustment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}",
+								"adjustment"
+							]
+						},
+						"description": "Add or deduct customer dues."
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase Membership for Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"membershipId\": \"{{membership_id}}\",\n  \"validFrom\": \"2024-01-01\",\n  \"validTill\": \"2024-12-31\",\n  \"paymentMethod\": \"cash\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}/memberships",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}",
+								"memberships"
+							]
+						},
+						"description": "Purchase a membership for a customer."
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase Service Package for Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"servicePackageId\": \"{{service_package_id}}\",\n  \"validFrom\": \"2024-01-01\",\n  \"validTill\": \"2024-06-30\",\n  \"paymentMethod\": \"card\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{store_id}}/{{customer_id}}/service-packages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customers",
+								"{{store_id}}",
+								"{{customer_id}}",
+								"service-packages"
+							]
+						},
+						"description": "Purchase a service package for a customer."
+					},
+					"response": []
+				}
+			],
+			"description": "Customer management APIs including CRUD operations, financial adjustments, and membership/package purchases"
+		},
+		{
+			"name": "Reviews APIs",
+			"item": [
+				{
+					"name": "Create Review",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.review) {",
+									"        pm.environment.set('review_id', response.data.review.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"storeId\": \"{{store_id}}\",\n    \"referringId\": \"customer123\",\n    \"staffRating\": 4,\n    \"hospitalityRating\": 5,\n    \"serviceRating\": 3,\n    \"review\": \"Had a fantastic experience at this store. Staff was very helpful and professional.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/reviews",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reviews"
+							]
+						},
+						"description": "Create a new review for a store. This is a public API with rate limiting. Each referringId can only submit one review per store."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/reviews/store/{{store_id}}?page=1&limit=10&status=active&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reviews",
+								"store",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "minRating",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "maxRating",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Get all reviews for a specific store with pagination and filtering. This is a public API with rate limiting."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Store Review Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/reviews/store/{{store_id}}/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reviews",
+								"store",
+								"{{store_id}}",
+								"statistics"
+							]
+						},
+						"description": "Get review statistics for a store including store_id, overall_rating, total_reviews, and star distribution (five_stars, four_stars, three_stars, two_stars, one_stars). This is a public API with rate limiting."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Duplicate Review (Test Error)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"storeId\": \"{{store_id}}\",\n    \"referringId\": \"customer123\",\n    \"staffRating\": 3,\n    \"hospitalityRating\": 4,\n    \"serviceRating\": 5,\n    \"review\": \"Trying to submit another review with same referringId\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/reviews",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reviews"
+							]
+						},
+						"description": "Test creating a duplicate review with the same referringId to verify the duplicate prevention logic works."
+					},
+					"response": []
+				}
+			],
+			"description": "Public review APIs for store ratings and feedback. All endpoints have rate limiting and no authentication required."
+		},
+		{
+			"name": "Staff Management APIs",
+			"item": [
+				{
+					"name": "Create Staff Member",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.staff) {",
+									"        pm.environment.set('staff_id', response.staff.id);",
+									"        pm.environment.set('staff_user_id', response.staff.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Smith\",\n    \"contact\": \"9876543210\",\n    \"gender\": \"male\",\n    \"email\": \"john.smith@example.com\",\n    \"doj\": \"2025-06-27\",\n    \"dob\": \"1996-02-18\",\n    \"designation\": \"Senior Stylist\",\n    \"role\": \"employee\",\n    \"shifts\": {\n        \"workingDays\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"],\n        \"workingHoursStart\": \"09:00\",\n        \"workingHoursEnd\": \"18:00\"\n    },\n    \"documentId\": \"staff_doc_abc123.pdf\",\n    \"photoId\": \"staff_photo_abc123.jpg\",\n    \"salary\": {\n        \"earnings\": {\n            \"basic\": 1234.90,\n            \"hra\": 400.00,\n            \"otherAllowances\": 300.00\n        },\n        \"deductions\": {\n            \"professionalTax\": 30.00,\n            \"epf\": 12.00\n        }\n    },\n    \"commission\": {\n        \"commissionType\": \"percentage\",\n        \"commissionCycle\": \"monthly\",\n        \"commissionRates\": [\n            {\n                \"type\": \"products\",\n                \"commissionType\": \"percentage\",\n                \"minRevenue\": 8000,\n                \"maxRevenue\": 12000,\n                \"commission\": 5\n            },\n            {\n                \"type\": \"memberships\",\n                \"minRevenue\": 12000,\n                \"maxRevenue\": 15000,\n                \"commissionType\": \"fixed\",\n                \"commission\": 1000\n            }\n        ]\n    },\n    \"accountNumber\": \"1234567890123456\",\n    \"ifscCode\": \"HDFC0001234\",\n    \"bankingName\": \"John Smith\",\n    \"bankName\": \"HDFC Bank\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new staff member with complete profile including salary, commission structure, shifts, and banking details. Creates user account in active state. Only owners and managers can create staff."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Staff Members",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.staff && response.staff.length > 0) {",
+									"        pm.environment.set('staff_id', response.staff[0].id);",
+									"        pm.environment.set('staff_user_id', response.staff[0].userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}?page=1&limit=10&status=active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						},
+						"description": "Retrieve all staff members for a store with pagination and status filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Staff Member by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}/{{staff_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}",
+								"{{staff_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific staff member including salary, commission, and user status."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Staff Member",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Smith - Updated\",\n    \"designation\": \"Senior Hair Stylist\",\n    \"shifts\": {\n        \"workingDays\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\", \"saturday\"],\n        \"workingHoursStart\": \"10:00\",\n        \"workingHoursEnd\": \"19:00\"\n    },\n    \"salary\": {\n        \"earnings\": {\n            \"basicSalary\": 1500.00,\n            \"hra\": 500.00,\n            \"otherAllowances\": 400.00\n        },\n        \"deductions\": {\n            \"professionalTax\": 35.00,\n            \"epf\": 15.00\n        }\n    },\n    \"commission\": {\n        \"commissionType\": \"percentage\",\n        \"commissionCycle\": \"weekly\",\n        \"commissionRates\": [\n            {\n                \"type\": \"services\",\n                \"commissionType\": \"percentage\",\n                \"minRevenue\": 5000,\n                \"maxRevenue\": 10000,\n                \"commission\": 8\n            }\n        ]\n    },\n    \"accountNumber\": \"9876543210987654\",\n    \"ifscCode\": \"ICIC0001234\",\n    \"bankingName\": \"John Smith\",\n    \"bankName\": \"ICICI Bank\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}/{{staff_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}",
+								"{{staff_id}}"
+							]
+						},
+						"description": "Update staff member details including salary, commission, shifts, banking details, and other information. Only owners and managers can update staff."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Staff Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"inactive\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}/{{staff_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}",
+								"{{staff_id}}"
+							]
+						},
+						"description": "Update only the staff member's status (active, inactive, terminated)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Staff Banking Details",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accountNumber\": \"5432109876543210\",\n    \"ifscCode\": \"SBIN0001234\",\n    \"bankingName\": \"John Smith\",\n    \"bankName\": \"State Bank of India\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}/{{staff_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}",
+								"{{staff_id}}"
+							]
+						},
+						"description": "Update only the banking details of a staff member including account number, IFSC code, banking name, and bank name."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Staff - Minimal Example",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"contact\": \"9876543211\",\n    \"gender\": \"female\",\n    \"doj\": \"2025-08-15\",\n    \"designation\": \"Receptionist\",\n    \"role\": \"employee\",\n    \"shifts\": {\n        \"workingDays\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"],\n        \"workingHoursStart\": \"09:00\",\n        \"workingHoursEnd\": \"17:00\"\n    },\n    \"salary\": {\n        \"earnings\": {\n            \"basic\": 800.00\n        },\n        \"deductions\": {}\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a staff member with minimal required information (no commission structure)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Staff - With Banking Details",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Sarah Wilson\",\n    \"contact\": \"9876543212\",\n    \"gender\": \"female\",\n    \"email\": \"sarah.wilson@example.com\",\n    \"doj\": \"2025-08-15\",\n    \"dob\": \"1995-07-22\",\n    \"designation\": \"Hair Specialist\",\n    \"role\": \"employee\",\n    \"shifts\": {\n        \"workingDays\": [\"tuesday\", \"wednesday\", \"thursday\", \"friday\", \"saturday\"],\n        \"workingHoursStart\": \"10:00\",\n        \"workingHoursEnd\": \"19:00\"\n    },\n    \"salary\": {\n        \"earnings\": {\n            \"basic\": 28000.00,\n            \"hra\": 5600.00,\n            \"otherAllowances\": 2000.00\n        },\n        \"deductions\": {\n            \"professionalTax\": 200.00,\n            \"epf\": 2000.00\n        }\n    },\n    \"commission\": {\n        \"commissionType\": \"percentage\",\n        \"commissionCycle\": \"monthly\",\n        \"commissionRates\": [\n            {\n                \"type\": \"services\",\n                \"commissionType\": \"percentage\",\n                \"minRevenue\": 0,\n                \"maxRevenue\": 50000,\n                \"commission\": 3\n            }\n        ]\n    },\n    \"accountNumber\": \"2468135790123456\",\n    \"ifscCode\": \"AXIS0001234\",\n    \"bankingName\": \"Sarah Wilson\",\n    \"bankName\": \"Axis Bank\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a staff member with complete profile including banking details for salary transfers."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Staff Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff/{{store_id}}/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"{{store_id}}",
+								"statistics"
+							]
+						},
+						"description": "Get comprehensive staff statistics including total staff, active/inactive counts, designations, and roles."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing staff members including creation, updating, role management, salary structures, and commission configurations. Each staff member gets a user account and can later set password via OTP verification."
+		},
+		{
+			"name": "Staff Payments APIs",
+			"item": [
+				{
+					"name": "Create Staff Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.payment) {",
+									"        pm.environment.set('payment_id', response.data.payment.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"staffId\": \"{{staff_id}}\",\n    \"paymentPeriod\": {\n        \"from\": \"2024-01-01\",\n        \"to\": \"2024-01-31\"\n    },\n    \"amount\": 45000,\n    \"accountNumber\": \"1234567890\",\n    \"ifscCode\": \"HDFC0001234\",\n    \"paymentBreakdown\": {\n        \"earnings\": {\n            \"basicSalary\": 35000,\n            \"overtime\": 5000,\n            \"commission\": 3000,\n            \"bonus\": 2000\n        },\n        \"deductions\": {\n            \"tax\": 4000,\n            \"pf\": 1500,\n            \"insurance\": 500\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments"
+							]
+						},
+						"description": "Create a new staff payment with detailed breakdown of earnings and deductions. The payment period must be unique for each staff member."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Staff Payments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments?page=1&limit=10&status=pending&staffId={{staff_id}}&sortBy=paymentDate&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "pending"
+								},
+								{
+									"key": "staffId",
+									"value": "{{staff_id}}"
+								},
+								{
+									"key": "sortBy",
+									"value": "paymentDate"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all staff payments with filtering, pagination, and sorting options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Staff Payment by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Get a specific staff payment by ID with full breakdown details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Staff Payment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 47000,\n    \"accountNumber\": \"1234567890\",\n    \"ifscCode\": \"HDFC0001234\",\n    \"paymentBreakdown\": {\n        \"earnings\": {\n            \"basicSalary\": 35000,\n            \"overtime\": 5000,\n            \"commission\": 5000,\n            \"bonus\": 2000\n        },\n        \"deductions\": {\n            \"tax\": 4200,\n            \"pf\": 1500,\n            \"insurance\": 500\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Update a staff payment record. Only pending payments can be updated."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"processed\",\n    \"transactionId\": \"TXN123456789\",\n    \"notes\": \"Payment processed successfully via bank transfer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments/{{payment_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments",
+								"{{payment_id}}",
+								"status"
+							]
+						},
+						"description": "Update the status of a staff payment (pending → processed → completed or failed). Include transaction ID for processed payments."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Staff Payment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/staff-payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff-payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Delete a staff payment record. Only pending payments can be deleted."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing staff payments including salary processing, commission calculations, and payment breakdowns. Supports detailed earnings and deductions tracking with status management."
+		},
+		{
+			"name": "Expense Management APIs",
+			"item": [
+				{
+					"name": "Get All Expenses",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.expenses && response.data.expenses.length > 0) {",
+									"        pm.environment.set('expense_id', response.data.expenses[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}?page=1&limit=10&status=pending&sortBy=date&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "employee_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "pending"
+								},
+								{
+									"key": "startDate",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "date"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Retrieve all expenses for a store with pagination, filtering, and summary statistics."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/{{expense_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"{{expense_id}}"
+							]
+						},
+						"description": "Get a specific expense by ID with employee and approver details."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Expense",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.expense) {",
+									"        pm.environment.set('expense_id', response.data.expense.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"expenseName\": \"Office Supplies\",\n    \"date\": \"2025-12-17\",\n    \"employee_id\": \"{{user_id}}\",\n    \"category\": \"Supplies\",\n    \"amount\": 145.30,\n    \"paymentMethod\": \"Credit Card\",\n    \"description\": \"Purchased office supplies for the store\",\n    \"receipt_id\": \"receipt_abc123.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}"
+							]
+						},
+						"description": "Create a new expense record for a store employee."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Expense",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"expenseName\": \"Office Supplies - Updated\",\n    \"amount\": 150.00,\n    \"description\": \"Updated expense description\",\n    \"receipt_id\": \"receipt_updated_abc123.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/{{expense_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"{{expense_id}}"
+							]
+						},
+						"description": "Update an existing expense. Employees can only update their own expenses."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Expense",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/{{expense_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"{{expense_id}}"
+							]
+						},
+						"description": "Delete an expense. Employees can only delete their own expenses."
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"approved\",\n    \"comments\": \"Expense approved for processing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/{{expense_id}}/approval",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"{{expense_id}}",
+								"approval"
+							]
+						},
+						"description": "Approve or reject an expense. Only managers and owners can approve expenses."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"rejected\",\n    \"comments\": \"Insufficient documentation provided\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/{{expense_id}}/approval",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"{{expense_id}}",
+								"approval"
+							]
+						},
+						"description": "Reject an expense with comments. Only managers and owners can reject expenses."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expenses/{{store_id}}/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expenses",
+								"{{store_id}}",
+								"statistics"
+							]
+						},
+						"description": "Get comprehensive expense statistics including overview, category breakdown, and monthly trends."
+					},
+					"response": []
+				}
+			],
+			"description": "Expense management APIs for tracking employee expenses, receipts, and approval workflows"
+		},
+		{
+			"name": "Appointments",
+			"item": [
+				{
+					"name": "Create Appointment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"  const json = pm.response.json();",
+									"  if (json.success && json.data && json.data.appointment && json.data.appointment.id) {",
+									"    pm.environment.set('appointment_id', json.data.appointment.id);",
+									"  }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"+1234567890\",\n  \"customerName\": \"Jane Customer\",\n  \"gender\": \"female\",\n  \"source\": \"instagram\",\n  \"date\": \"2025-09-20\",\n  \"time\": \"14:30\",\n  \"status\": \"scheduled\",\n  \"services\": [\n    { \"serviceId\": \"{{service_id}}\", \"staffId\": \"{{staff_id}}\", \"position\": 0 }\n  ],\n  \"totalDurationMinutes\": 60,\n  \"totalAmount\": 1200,\n  \"advanceAmount\": 200,\n  \"payableAmount\": 1000,\n  \"paymentMode\": \"cash\",\n  \"notes\": \"First-time visit\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/store/{{store_id}}/appointments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"store",
+								"{{store_id}}",
+								"appointments"
+							]
+						},
+						"description": "Create a new appointment for a store. Status allowed: scheduled, in-progress, completed, cancelled."
+					},
+					"response": []
+				},
+				{
+					"name": "List Appointments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"  const json = pm.response.json();",
+									"  const list = json && json.data && json.data.appointments;",
+									"  if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+									"    pm.environment.set('appointment_id', list[0].id);",
+									"  }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/store/{{store_id}}/appointments?date=2025-09-20&status=scheduled&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"store",
+								"{{store_id}}",
+								"appointments"
+							],
+							"query": [
+								{ "key": "date", "value": "2025-09-20", "description": "YYYY-MM-DD" },
+								{ "key": "status", "value": "scheduled", "description": "scheduled | in-progress | completed | cancelled" },
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "10" }
+							]
+						},
+						"description": "List appointments for a store with optional date/status filters and pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Appointment By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/store/{{store_id}}/appointments/{{appointment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"store",
+								"{{store_id}}",
+								"appointments",
+								"{{appointment_id}}"
+							]
+						},
+						"description": "Get a single appointment by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Appointment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"+1234567890\",\n  \"customerName\": \"Jane Customer\",\n  \"gender\": \"female\",\n  \"source\": \"instagram\",\n  \"date\": \"2025-09-20\",\n  \"time\": \"15:00\",\n  \"status\": \"in-progress\",\n  \"services\": [\n    { \"serviceId\": \"{{service_id}}\", \"staffId\": \"{{staff_id}}\", \"position\": 0 }\n  ],\n  \"totalDurationMinutes\": 60,\n  \"totalAmount\": 1200,\n  \"advanceAmount\": 200,\n  \"payableAmount\": 1000,\n  \"paymentMode\": \"cash\",\n  \"notes\": \"Updated time and status\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/store/{{store_id}}/appointments/{{appointment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"store",
+								"{{store_id}}",
+								"appointments",
+								"{{appointment_id}}"
+							]
+						},
+						"description": "Update an existing appointment including status, time, and services."
+					},
+					"response": []
+				}
+			],
+			"description": "Appointments scheduling and management APIs"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "temp_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "phone_number",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "store_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "target_user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "shift_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "special_shift_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "receipt_settings_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "product_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customer_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "review_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "expense_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staff_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staff_user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "appointment_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "service_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

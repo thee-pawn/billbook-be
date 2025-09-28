@@ -1,0 +1,780 @@
+{
+	"info": {
+		"_postman_id": "shift-management-collection",
+		"name": "Billbook Shift Management APIs",
+		"description": "Complete collection for Shift and Special Shift Management APIs in Billbook Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Regular Shifts Management",
+			"item": [
+				{
+					"name": "Create Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"monday\",\n  \"opening_time\": \"09:00\",\n  \"closing_time\": \"18:00\",\n  \"is_24_hrs_open\": false,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a regular weekly shift for a specific day. Only owners and managers can create shifts."
+					},
+					"response": []
+				},
+				{
+					"name": "Create 24 Hour Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"saturday\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a 24-hour shift for a specific day."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Closed Day Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"day\": \"sunday\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Create a closed day shift (store is closed on this day) using the is_closed field."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Store Shifts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts"
+							]
+						},
+						"description": "Get all weekly shifts for a store, ordered by day (Monday to Sunday)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Shift",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Get details of a specific shift by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": \"10:00\",\n  \"closing_time\": \"19:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update shift details. Only owners and managers can update shifts."
+					},
+					"response": []
+				},
+				{
+					"name": "Update to 24 Hour Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update a shift to be 24 hours open."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift to Closed",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hrs_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Update a shift to be closed (store closed on this day)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Shift",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/shifts/{{shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"shifts",
+								"{{shift_id}}"
+							]
+						},
+						"description": "Delete a shift. Only owners and managers can delete shifts."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing regular weekly store operating hours"
+		},
+		{
+			"name": "Special Shifts Management",
+			"item": [
+				{
+					"name": "Create Special Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-25\",\n  \"opening_time\": \"10:00\",\n  \"closing_time\": \"16:00\",\n  \"is_24_hours_open\": false,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create special operating hours for a specific date (holidays, events, etc.)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Special Closed Day",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-01-01\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create a special closed day (store is closed on this specific date) using the is_closed field."
+					},
+					"response": []
+				},
+				{
+					"name": "Create 24 Hour Special Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-31\",\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": true,\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							]
+						},
+						"description": "Create a 24-hour special shift for a specific date (New Year's Eve, etc.)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Special Shifts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number for pagination"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Number of special shifts per page"
+								}
+							]
+						},
+						"description": "Get all special shifts for a store with pagination support."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Special Shifts with Date Filter",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts?from_date=2025-12-01&to_date=2025-12-31&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts"
+							],
+							"query": [
+								{
+									"key": "from_date",
+									"value": "2025-12-01",
+									"description": "Start date for filtering (YYYY-MM-DD)"
+								},
+								{
+									"key": "to_date",
+									"value": "2025-12-31",
+									"description": "End date for filtering (YYYY-MM-DD)"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number for pagination"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Number of special shifts per page"
+								}
+							]
+						},
+						"description": "Get special shifts for a store filtered by date range."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Special Shift",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Get details of a specific special shift by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": \"09:00\",\n  \"closing_time\": \"17:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update special shift details. Only owners and managers can update special shifts."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift Date",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2025-12-26\",\n  \"opening_time\": \"11:00\",\n  \"closing_time\": \"15:00\",\n  \"is_closed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update both the date and hours of a special shift."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Special Shift to Closed",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opening_time\": null,\n  \"closing_time\": null,\n  \"is_24_hours_open\": false,\n  \"is_closed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Update a special shift to be closed (store closed on this specific date)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Special Shift",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stores/{{store_id}}/special-shifts/{{special_shift_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"stores",
+								"{{store_id}}",
+								"special-shifts",
+								"{{special_shift_id}}"
+							]
+						},
+						"description": "Delete a special shift. Only owners and managers can delete special shifts."
+					},
+					"response": []
+				}
+			],
+			"description": "APIs for managing special date-specific store operating hours"
+		},
+		{
+			"name": "Authentication (Required for Shift APIs)",
+			"item": [
+				{
+					"name": "User Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.authToken) {",
+									"        pm.environment.set('auth_token', response.data.authToken);",
+									"        pm.environment.set('user_id', response.data.userId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login to get authentication token. Token is automatically saved to environment variables."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints required before using shift APIs"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "store_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "shift_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "special_shift_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
