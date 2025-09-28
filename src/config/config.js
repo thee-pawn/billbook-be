@@ -32,7 +32,9 @@ module.exports = {
     name: process.env.DB_NAME || 'bbplus',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
-    ssl: process.env.NODE_ENV === 'production'
+    ssl: process.env.NODE_ENV === 'production' ? {
+      rejectUnauthorized: false  // For AWS RDS with self-signed certificates
+    } : false
   },
 
   // AWS S3 Configuration
