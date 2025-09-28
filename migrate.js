@@ -45,10 +45,9 @@ class DatabaseMigrator {
 
   async getMigrationFiles() {
     const files = fs.readdirSync(this.migrationsDir)
-      .filter(file => file.match(/^V\d+__.+\.sql$/))
-      .sort();
+      .filter(file => file.match(/^V\d+__.+\.sql$/));
     
-    return files.map(file => {
+    const migrations = files.map(file => {
       const match = file.match(/^V(\d+)__(.+)\.sql$/);
       return {
         version: match[1],
@@ -57,6 +56,9 @@ class DatabaseMigrator {
         filepath: path.join(this.migrationsDir, file)
       };
     });
+    
+    // Sort by version number (numerically, not alphabetically)
+    return migrations.sort((a, b) => parseInt(a.version) - parseInt(b.version));
   }
 
   async getPendingMigrations() {

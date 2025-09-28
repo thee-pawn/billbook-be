@@ -1,0 +1,570 @@
+BILLING API INTEGRATION GUIDE
+=============================
+
+BASE CONFIGURATION:
+- Base URL: /api/v1
+- Auth: Authorization: Bearer <JWT>
+- Content-Type: application/json
+- Store Path: /billing/{storeId}
+
+ENDPOINTS:
+1. POST /billing/{storeId}/bills - Save bill (creates invoice)
+2. GET /billing/{storeId}/bills - List bills
+3. POST /billing/{storeId}/bills/hold - Hold bill (draft)
+4. GET /billing/{storeId}/bills/held - List held bills  
+5. GET /billing/{storeId}/bills/held/{heldId} - Get held bill
+
+=============================
+SAVE BILL REQUEST
+=============================
+
+POST /api/v1/billing/{storeId}/bills
+
+Headers:
+Authorization: Bearer <JWT>
+Content-Type: application/json
+Idempotency-Key: bill-12345 (optional, prevents duplicates)
+
+Request Body:
+{
+  "customer_id": "uuid",
+  "customer": {
+    "name": "John Doe",
+    "gender": "Male",
+    "contact_no": "+919876543210",
+    "address": "123 Main St",
+    "email": "john@example.com"
+  },
+  "coupon_code": "SAVE20",
+  "coupon_codes": ["SAVE20", "WELCOME10"],
+  "referral_code": "REF123",
+  "items": [
+    {
+      "line_no": 1,
+      "type": "service",
+      "id": "service-uuid",
+      "staff_id": "staff-uuid",
+      "qty": 1,
+      "discount_type": "percent",
+      "discount_value": 10,
+      "cgst": 9,
+      "sgst": 9
+    }
+  ],
+  "discount": 50.00,
+  "payment_mode": "split",
+  "payment_amount": 1000.00,
+  "payments": [
+    {
+      "mode": "upi",
+      "amount": 600.00,
+      "reference": "UPI-TXN-123",
+      "timestamp": "2025-09-26T11:30:00.000Z"
+    },
+    {
+      "mode": "cash",
+      "amount": 400.00,
+      "reference": null,
+      "timestamp": "2025-09-26T11:31:00.000Z"
+    }
+  ],
+  "billing_timestamp": "2025-09-26T11:29:00.000Z",
+  "payment_timestamp": "2025-09-26T11:31:00.000Z"
+}
+
+RULES:
+- Use EITHER customer_id OR customer (not both)
+- Phone format: E.164 (+919876543210)  
+- Payment modes: cash|card|upi|wallet|split|none
+- Item types: service|product|membership
+- Discount types: percent|flat
+- For split: multiple payments, sum = payment_amount
+- For none: payment_amount = 0, payments = []
+
+=============================
+SAVE BILL RESPONSE
+=============================
+
+Success (201):
+{
+  "success": true,
+  "message": "Bill saved successfully",
+  "data": {
+    "bill_id": "uuid",
+    "invoice_number": "INV202500001",
+    "created_at": "2025-09-26T11:29:15.123Z",
+    "customer": {
+      "id": "customer-uuid",
+      "name": "John Doe",
+      "phoneNumber": "+919876543210",
+      "address": "123 Main St"
+    },
+    "items": [
+      {
+        "line_no": 1,
+        "type": "service",
+        "id": "service-uuid",
+        "name": "Haircut Premium",
+        "staff_id": "staff-uuid",
+        "qty": 1,
+        "discount_type": "percent",
+        "discount_value": 10,
+        "cgst_rate": 9,
+        "sgst_rate": 9,
+        "cgst_amount": 81.00,
+        "sgst_amount": 81.00,
+        "base_amount": 1000.00,
+        "discount_amount": 100.00,
+        "line_total": 1062.00
+      }
+    ],
+    "totals": {
+      "sub_total": 1062.00,
+      "discount": 50.00,
+      "tax_amount": 162.00,
+      "cgst_amount": 81.00,
+      "sgst_amount": 81.00,
+      "grand_total": 1012.00,
+      "paid": 1000.00,
+      "dues": 12.00
+    },
+    "payments": [...]
+  }
+}
+
+=============================
+LIST BILLS
+=============================
+
+GET /api/v1/billing/{storeId}/bills?page=1&limit=20&from=2025-09-01T00:00:00.000Z&to=2025-09-30T23:59:59.999Z&q=john&sort=date_desc&status=paid
+
+Query Parameters:
+- page: 1 (default)
+- limit: 20 (default, max 100)
+- from: Start date (ISO8601)
+- to: End date (ISO8601)
+- q: Search term (name/phone/invoice)
+- sort: date_asc|date_desc|amount_asc|amount_desc
+- status: paid|partial|unpaid
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "bill_id": "uuid",
+        "invoice_number": "INV202500001",
+        "created_at": "2025-09-26T11:29:15.123Z",
+        "customer_name": "John Doe",
+        "customer_phone": "+919876543210",
+        "grand_total": 1012.00,
+        "paid": 1000.00,
+        "dues": 12.00,
+        "status": "partial"
+      }
+    ],
+    "page": 1,
+    "limit": 20,
+    "total": 145
+  }
+}
+
+=============================
+HOLD BILL (DRAFT)
+=============================
+
+POST /api/v1/billing/{storeId}/bills/hold
+
+Request: Same as Save Bill but payments optional
+
+{
+  "customer": {
+    "name": "Anita Singh",
+    "contact_no": "+919876543210"
+  },
+  "items": [
+    {
+      "line_no": 1,
+      "type": "service",
+      "id": "service-uuid",
+      "qty": 1,
+      "discount_type": "percent",
+      "discount_value": 0,
+      "cgst": 9,
+      "sgst": 9
+    }
+  ],
+  "discount": 0,
+  "payment_mode": "none",
+  "payment_amount": 0,
+  "billing_timestamp": "2025-09-26T12:00:00.000Z"
+}
+
+Response (201):
+{
+  "success": true,
+  "message": "Bill held successfully",
+  "data": {
+    "held_id": "uuid",
+    "created_at": "2025-09-26T12:00:00.000Z"
+  }
+}
+
+=============================
+LIST HELD BILLS
+=============================
+
+GET /api/v1/billing/{storeId}/bills/held
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "held": [
+      {
+        "held_id": "uuid",
+        "created_at": "2025-09-26T12:00:00.000Z",
+        "customer_summary": "Anita Singh (+919876543210)",
+        "amount_estimate": 1315.50
+      }
+    ]
+  }
+}
+
+=============================
+GET HELD BILL
+=============================
+
+GET /api/v1/billing/{storeId}/bills/held/{heldId}
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "held": {
+      "payload": {
+        // Original request from hold operation
+      },
+      "suggested_number": "INV202500002"
+    }
+  }
+}
+
+=============================
+JAVASCRIPT EXAMPLES
+=============================
+
+// Create Bill Function
+const createBill = async (storeId, billData) => {
+  try {
+    const response = await fetch(`/api/v1/billing/${storeId}/bills`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${jwt}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': `bill-${Date.now()}-${Math.random()}`
+      },
+      body: JSON.stringify(billData)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      console.log('Bill created:', result.data.invoice_number);
+      return result.data;
+    } else {
+      console.error('Error:', result.message);
+      throw new Error(result.message);
+    }
+  } catch (error) {
+    console.error('Network error:', error);
+    throw error;
+  }
+};
+
+// Customer Selection
+const getBillCustomer = (existingCustomer, newCustomerForm) => {
+  if (existingCustomer) {
+    return { customer_id: existingCustomer.id };
+  } else {
+    return {
+      customer: {
+        name: newCustomerForm.name,
+        contact_no: newCustomerForm.phone, // Must be E.164
+        gender: newCustomerForm.gender,
+        address: newCustomerForm.address,
+        email: newCustomerForm.email
+      }
+    };
+  }
+};
+
+// Items Array Builder  
+const buildItemsArray = (cartItems) => {
+  return cartItems.map((item, index) => ({
+    line_no: index + 1,
+    type: item.catalogType, // 'service'|'product'|'membership'
+    id: item.catalogId,
+    staff_id: item.assignedStaff?.id || null,
+    qty: item.quantity,
+    discount_type: item.discountType,
+    discount_value: item.discountAmount,
+    cgst: item.cgstRate,
+    sgst: item.sgstRate
+  }));
+};
+
+// Payment Processing
+const getPaymentData = (paymentMode, paymentMethods, totalAmount) => {
+  if (paymentMode === 'none') {
+    return {
+      payment_mode: 'none',
+      payment_amount: 0,
+      payments: []
+    };
+  }
+  
+  if (paymentMode === 'split') {
+    return {
+      payment_mode: 'split',
+      payment_amount: paymentMethods.reduce((sum, p) => sum + p.amount, 0),
+      payments: paymentMethods.map(p => ({
+        mode: p.method,
+        amount: p.amount,
+        reference: p.reference,
+        timestamp: new Date().toISOString()
+      }))
+    };
+  }
+  
+  // Single payment
+  return {
+    payment_mode: paymentMode,
+    payment_amount: totalAmount,
+    payments: [{
+      mode: paymentMode,
+      amount: totalAmount,
+      reference: paymentMethods[0]?.reference,
+      timestamp: new Date().toISOString()
+    }]
+  };
+};
+
+// Complete Bill Creation
+const completeBillFlow = async () => {
+  const billRequest = {
+    ...getBillCustomer(selectedCustomer, customerForm),
+    coupon_code: appliedCoupon?.code || null,
+    items: buildItemsArray(cartItems),
+    discount: billLevelDiscount,
+    ...getPaymentData(selectedPaymentMode, paymentMethods, calculatedTotal),
+    billing_timestamp: new Date().toISOString(),
+    payment_timestamp: new Date().toISOString()
+  };
+  
+  const bill = await createBill(storeId, billRequest);
+  displayInvoice(bill);
+};
+
+// Error Handling
+const handleBillError = (response, errorData) => {
+  switch (response.status) {
+    case 400:
+      // Validation errors
+      if (errorData.errors) {
+        errorData.errors.forEach(err => {
+          console.error(`${err.field}: ${err.message}`);
+        });
+      }
+      break;
+    case 403:
+      console.error('Store access denied');
+      // Redirect to login or show access error
+      break;
+    case 409:
+      console.error('Duplicate bill - idempotency conflict');
+      // Show duplicate error or retry with new key
+      break;
+    default:
+      console.error('Unexpected error:', errorData.message);
+  }
+};
+
+// List Bills with Filters
+const fetchBills = async (filters = {}) => {
+  const params = new URLSearchParams({
+    page: filters.page || 1,
+    limit: filters.limit || 20,
+    ...(filters.from && { from: filters.from }),
+    ...(filters.to && { to: filters.to }),
+    ...(filters.search && { q: filters.search }),
+    ...(filters.sort && { sort: filters.sort }),
+    ...(filters.status && { status: filters.status })
+  });
+  
+  const response = await fetch(`/api/v1/billing/${storeId}/bills?${params}`, {
+    headers: { 'Authorization': `Bearer ${jwt}` }
+  });
+  
+  return await response.json();
+};
+
+// Hold Bill as Draft
+const saveDraft = async (billData) => {
+  const draftData = {
+    ...billData,
+    payment_mode: 'none',
+    payment_amount: 0,
+    payments: []
+  };
+  
+  const response = await fetch(`/api/v1/billing/${storeId}/bills/hold`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${jwt}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(draftData)
+  });
+  
+  const result = await response.json();
+  return result.data.held_id;
+};
+
+// Load Draft for Editing
+const loadDraft = async (heldId) => {
+  const response = await fetch(`/api/v1/billing/${storeId}/bills/held/${heldId}`, {
+    headers: { 'Authorization': `Bearer ${jwt}` }
+  });
+  
+  const result = await response.json();
+  const originalPayload = result.data.held.payload;
+  
+  // Populate form with draft data
+  populateFormFromDraft(originalPayload);
+  
+  return originalPayload;
+};
+
+=============================
+VALIDATION CHECKLIST
+=============================
+
+Before Submit:
+□ Either customer_id OR customer provided (not both)
+□ Customer phone in E.164 format (+919876543210)  
+□ All items have qty >= 1
+□ Valid catalog IDs for store and type
+□ Payment amounts sum correctly for split
+□ Payment mode matches payments array
+□ Timestamps in ISO8601 format
+□ Tax rates as percentages (9 = 9%)
+□ Non-empty items array
+□ Valid discount values >= 0
+
+Payment Mode Rules:
+□ "none": payment_amount = 0, payments = []
+□ "split": multiple payments, sum = payment_amount  
+□ Single: one payment, mode matches, sum = payment_amount
+
+Success Indicators:
+□ Status 201 for creation
+□ Invoice number generated (INV format)
+□ All computed amounts returned
+□ Correct payment status (paid/partial/unpaid)
+
+=============================
+COMMON ERRORS & SOLUTIONS
+=============================
+
+400 Bad Request:
+- Check required fields
+- Validate phone format (+country_code)
+- Ensure payment amounts match
+- Verify catalog IDs exist
+
+403 Forbidden:
+- Check JWT token validity
+- Verify store access permissions
+- Ensure user belongs to store
+
+409 Conflict:
+- Use different Idempotency-Key
+- Check for duplicate submissions
+
+500 Internal Server Error:
+- Retry with exponential backoff
+- Check server logs
+- Verify all catalog items exist
+
+=============================
+CURL EXAMPLES
+=============================
+
+# Save Bill
+curl -X POST "/api/v1/billing/STORE123/bills" \
+  -H "Authorization: Bearer JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: bill-12345" \
+  -d '{
+    "customer_id": "CUST789",
+    "items": [{
+      "line_no": 1,
+      "type": "service",
+      "id": "SER101",
+      "qty": 1,
+      "discount_type": "percent", 
+      "discount_value": 10,
+      "cgst": 9,
+      "sgst": 9
+    }],
+    "payment_mode": "upi",
+    "payment_amount": 900,
+    "payments": [{
+      "mode": "upi",
+      "amount": 900,
+      "reference": "UPI-123",
+      "timestamp": "2025-09-26T12:30:00.000Z"
+    }],
+    "billing_timestamp": "2025-09-26T12:29:00.000Z"
+  }'
+
+# List Bills  
+curl -X GET "/api/v1/billing/STORE123/bills?page=1&limit=20&status=paid" \
+  -H "Authorization: Bearer JWT_TOKEN"
+
+# Hold Bill
+curl -X POST "/api/v1/billing/STORE123/bills/hold" \
+  -H "Authorization: Bearer JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": {"name": "John", "contact_no": "+919876543210"},
+    "items": [{"line_no": 1, "type": "service", "id": "SER101", "qty": 1, "cgst": 9, "sgst": 9}],
+    "payment_mode": "none"
+  }'
+
+# List Held Bills
+curl -X GET "/api/v1/billing/STORE123/bills/held" \
+  -H "Authorization: Bearer JWT_TOKEN"
+
+# Get Held Bill
+curl -X GET "/api/v1/billing/STORE123/bills/held/HELD123" \
+  -H "Authorization: Bearer JWT_TOKEN"
+
+=============================
+INTEGRATION SUMMARY
+=============================
+
+1. AUTHENTICATION: Always include Bearer token
+2. IDEMPOTENCY: Use unique keys for bill creation  
+3. CUSTOMER: Provide either ID or full customer object
+4. ITEMS: Map cart to line items with tax rates
+5. PAYMENTS: Match mode with payments array
+6. VALIDATION: Check all rules before submit
+7. ERRORS: Handle 400/403/409 appropriately  
+8. DRAFTS: Use hold endpoint for incomplete bills
+9. SEARCH: Use query params for filtering
+10. DISPLAY: Show computed totals and payment status
+
+Copy and adapt these examples for your frontend implementation!
