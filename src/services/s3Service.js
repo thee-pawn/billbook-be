@@ -88,7 +88,6 @@ class S3Service {
       storage: multerS3({
         s3: s3,
         bucket: this.bucketName,
-        acl: 'public-read',
         metadata: function (req, file, cb) {
           cb(null, { fieldName: file.fieldname });
         },
@@ -116,7 +115,6 @@ class S3Service {
       Bucket: this.bucketName,
       Key: key,
       Body: file,
-      ACL: options.acl || 'public-read',
       ContentType: options.contentType || 'application/octet-stream'
     };
 
