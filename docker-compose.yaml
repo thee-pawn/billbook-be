@@ -1,0 +1,7 @@
+services:
+  localstack:
+    image: localstack/localstack
+    environment:
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - ./localstack-data:/tmp/localstack/data

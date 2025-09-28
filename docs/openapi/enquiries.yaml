@@ -1,0 +1,292 @@
+openapi: 3.0.3
+info:
+  title: Billbook Enquiries API
+  version: 1.0.0
+  description: Enquiries management APIs
+servers:
+  - url: http://localhost:3000/api/v1
+paths:
+  /enquiries/{storeId}:
+    post:
+      summary: Create an enquiry
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnquiryCreate'
+            examples:
+              default:
+                value:
+                  contact_no: "9110178227"
+                  country_code: "+91"
+                  name: "Pawan Kumar"
+                  gender: "male"
+                  email: "pawan@example.com"
+                  source: "instagram"
+                  enquiry_type: "hot"
+                  enquiry_status: "pending"
+                  notes: "Prefers morning calls"
+                  follow_up_at: "2025-09-20T05:00:00.000Z"
+                  enquiry_details:
+                    - { category: service, name: Haircut, reference_id: svc-uuid-1 }
+                    - { category: product, name: Shampoo, reference_id: prd-uuid-2 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnquiryWithDetailsResponse' }
+    get:
+      summary: List enquiries
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/EnquiryStatus' }
+        - in: query
+          name: type
+          schema: { $ref: '#/components/schemas/EnquiryType' }
+        - in: query
+          name: source
+          schema: { $ref: '#/components/schemas/EnquirySource' }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: includeDeleted
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnquiryListResponse' }
+  /enquiries/{storeId}/{enquiryId}:
+    get:
+      summary: Get enquiry by id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: enquiryId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnquiryWithDetailsResponse' }
+    put:
+      summary: Update enquiry (replace details)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: enquiryId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnquiryUpdate' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnquiryWithDetailsResponse' }
+    delete:
+      summary: Soft delete enquiry
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: enquiryId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+  /enquiries/{storeId}/{enquiryId}/status:
+    patch:
+      summary: Update enquiry status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: enquiryId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enquiry_status: { $ref: '#/components/schemas/EnquiryStatus' }
+              required: [enquiry_status]
+      responses:
+        '200':
+          description: OK
+  /enquiries/{storeId}/{enquiryId}/follow-up:
+    patch:
+      summary: Update follow-up time
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: enquiryId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                follow_up_at: { type: string, format: date-time, nullable: true }
+              required: [follow_up_at]
+      responses:
+        '200':
+          description: OK
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    EnquiryStatus:
+      type: string
+      enum: [pending, converted, closed]
+    EnquiryType:
+      type: string
+      enum: [hot, cold, warm]
+    EnquirySource:
+      type: string
+      enum: [walk-in, instagram, facebook, cold-calling, website, client-reference]
+    EnquiryGender:
+      type: string
+      enum: [male, female, other]
+    EnquiryDetailsItem:
+      type: object
+      required: [category, name, reference_id]
+      properties:
+        category: { type: string, enum: [service, product, membership-package] }
+        name: { type: string }
+        reference_id: { type: string }
+    EnquiryCreate:
+      type: object
+      required: [contact_no, country_code, name, gender, source, enquiry_type, enquiry_status, enquiry_details]
+      properties:
+        contact_no: { type: string, pattern: '^[0-9]{10}$' }
+        country_code: { type: string, pattern: '^\+[0-9]+$' }
+        name: { type: string }
+        email: { type: string, format: email, nullable: true }
+        gender: { $ref: '#/components/schemas/EnquiryGender' }
+        source: { $ref: '#/components/schemas/EnquirySource' }
+        enquiry_type: { $ref: '#/components/schemas/EnquiryType' }
+        enquiry_status: { $ref: '#/components/schemas/EnquiryStatus' }
+        notes: { type: string, nullable: true }
+        follow_up_at: { type: string, format: date-time, nullable: true }
+        enquiry_details:
+          type: array
+          items: { $ref: '#/components/schemas/EnquiryDetailsItem' }
+          minItems: 1
+    EnquiryUpdate:
+      allOf:
+        - $ref: '#/components/schemas/EnquiryCreate'
+      description: All fields optional; enquiry_details replaces items when provided
+    Enquiry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        store_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid, nullable: true }
+        contact_no: { type: string }
+        country_code: { type: string }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        gender: { $ref: '#/components/schemas/EnquiryGender' }
+        source: { $ref: '#/components/schemas/EnquirySource' }
+        enquiry_type: { $ref: '#/components/schemas/EnquiryType' }
+        enquiry_status: { $ref: '#/components/schemas/EnquiryStatus' }
+        notes: { type: string, nullable: true }
+        follow_up_at: { type: string, format: date-time, nullable: true }
+        created_by: { type: string, format: uuid }
+        updated_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        deleted_at: { type: string, format: date-time, nullable: true }
+    EnquiryWithDetailsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            enquiry: { $ref: '#/components/schemas/Enquiry' }
+            details:
+              type: array
+              items: { $ref: '#/components/schemas/EnquiryDetailsItem' }
+    EnquiryListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            enquiries:
+              type: array
+              items: { $ref: '#/components/schemas/Enquiry' }
+            pagination:
+              type: object
+              properties:
+                page: { type: integer }
+                limit: { type: integer }
+                total: { type: integer }
+                pages: { type: integer }

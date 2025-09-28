@@ -44,7 +44,13 @@ router.get('/:storeId', authenticateToken, generalLimiter, async (req, res, next
         loyalty_points_conversion_rate as "loyaltyPointsConversionRate",
         service_loyalty_points as "serviceLoyaltyPoints",
         product_loyalty_points as "productLoyaltyPoints", 
-        membership_loyalty_points as "membershipLoyaltyPoints",
+  membership_loyalty_points as "membershipLoyaltyPoints",
+  min_service_redemption as "minServiceRedemption",
+  max_service_redemption as "maxServiceRedemption",
+  min_products_redemption as "minProductsRedemption",
+  max_products_redemption as "maxProductsRedemption",
+  min_membership_redemption as "minMembershipRedemption",
+  max_membership_redemption as "maxMembershipRedemption",
         created_at,
         updated_at
        FROM loyalty_points_configuration 
@@ -80,7 +86,13 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
       loyaltyPointsConversionRate,
       serviceLoyaltyPoints,
       productLoyaltyPoints,
-      membershipLoyaltyPoints
+      membershipLoyaltyPoints,
+      minServiceRedemption = 0,
+      maxServiceRedemption = 0,
+      minProductsRedemption = 0,
+      maxProductsRedemption = 0,
+      minMembershipRedemption = 0,
+      maxMembershipRedemption = 0
     } = req.body;
 
     // Check if user has access to this store
@@ -121,9 +133,15 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
         service_loyalty_points, 
         product_loyalty_points, 
         membership_loyalty_points,
+        min_service_redemption,
+        max_service_redemption,
+        min_products_redemption,
+        max_products_redemption,
+        min_membership_redemption,
+        max_membership_redemption,
         created_at, 
         updated_at
-      ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()) 
       RETURNING 
         id,
         store_id,
@@ -131,6 +149,12 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
         service_loyalty_points as "serviceLoyaltyPoints",
         product_loyalty_points as "productLoyaltyPoints", 
         membership_loyalty_points as "membershipLoyaltyPoints",
+        min_service_redemption as "minServiceRedemption",
+        max_service_redemption as "maxServiceRedemption",
+        min_products_redemption as "minProductsRedemption",
+        max_products_redemption as "maxProductsRedemption",
+        min_membership_redemption as "minMembershipRedemption",
+        max_membership_redemption as "maxMembershipRedemption",
         created_at,
         updated_at`,
       [
@@ -138,7 +162,13 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
         loyaltyPointsConversionRate,
         serviceLoyaltyPoints,
         productLoyaltyPoints,
-        membershipLoyaltyPoints
+        membershipLoyaltyPoints,
+        minServiceRedemption,
+        maxServiceRedemption,
+        minProductsRedemption,
+        maxProductsRedemption,
+        minMembershipRedemption,
+        maxMembershipRedemption
       ]
     );
 
@@ -202,7 +232,13 @@ router.put('/:storeId', authenticateToken, generalLimiter, validate(schemas.upda
       loyaltyPointsConversionRate: 'loyalty_points_conversion_rate',
       serviceLoyaltyPoints: 'service_loyalty_points',
       productLoyaltyPoints: 'product_loyalty_points',
-      membershipLoyaltyPoints: 'membership_loyalty_points'
+  membershipLoyaltyPoints: 'membership_loyalty_points',
+  minServiceRedemption: 'min_service_redemption',
+  maxServiceRedemption: 'max_service_redemption',
+  minProductsRedemption: 'min_products_redemption',
+  maxProductsRedemption: 'max_products_redemption',
+  minMembershipRedemption: 'min_membership_redemption',
+  maxMembershipRedemption: 'max_membership_redemption'
     };
 
     const setParts = [];
@@ -238,7 +274,13 @@ router.put('/:storeId', authenticateToken, generalLimiter, validate(schemas.upda
         loyalty_points_conversion_rate as "loyaltyPointsConversionRate",
         service_loyalty_points as "serviceLoyaltyPoints",
         product_loyalty_points as "productLoyaltyPoints", 
-        membership_loyalty_points as "membershipLoyaltyPoints",
+  membership_loyalty_points as "membershipLoyaltyPoints",
+  min_service_redemption as "minServiceRedemption",
+  max_service_redemption as "maxServiceRedemption",
+  min_products_redemption as "minProductsRedemption",
+  max_products_redemption as "maxProductsRedemption",
+  min_membership_redemption as "minMembershipRedemption",
+  max_membership_redemption as "maxMembershipRedemption",
         created_at,
         updated_at
     `;

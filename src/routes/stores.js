@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { validate, schemas } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
-const { generalLimiter } = require('../middleware/rateLimiter');
+const { generalLimiter, uploadLimiter } = require('../middleware/rateLimiter');
 const database = require('../config/database');
+const s3Service = require('../services/s3Service');
 
 // Create Store
 router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore), async (req, res, next) => {
@@ -32,6 +33,8 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
       logo_url
     } = req.body;
 
+    const finalLogoUrl = logo_url || null;
+
     // Start transaction
     await database.query('BEGIN');
 
@@ -51,7 +54,7 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
           name, mobile_no, whatsapp_no, contact_email_id, reporting_email_id,
           gst_number, tax_billing, business_category, instagram_link, facebook_link,
           google_maps_link, address_line_1, locality, city, state, country,
-          pincode, latitude, longitude, logo_url
+          pincode, latitude, longitude, finalLogoUrl
         ]
       );
 
@@ -104,6 +107,169 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
       await database.query('ROLLBACK');
       throw error;
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Upload Store Logo
+router.post(
+  '/:storeId/logo',
+  authenticateToken,
+  uploadLimiter,
+  async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { storeId } = req.params;
+
+      // 1. Check user permissions (owner or manager)
+      const permissionResult = await database.query(
+        `SELECT role FROM store_users WHERE store_id = $1 AND user_id = $2`,
+        [storeId, userId]
+      );
+
+      if (permissionResult.rows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to access this store'
+        });
+      }
+
+      const userRole = permissionResult.rows[0].role;
+      if (!['owner', 'manager'].includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to upload a logo for this store'
+        });
+      }
+
+      // 2. Configure S3 upload middleware
+      const upload = s3Service.createUploadMiddleware({
+        allowedTypes: ['image/jpeg', 'image/png', 'image/gif'],
+        maxFileSize: 5 * 1024 * 1024, // 5MB
+        filePrefix: `stores/${storeId}/logos/`
+      });
+
+      // ...existing code...
+      // 3. Process the upload
+      upload.single('logo')(req, res, async (err) => {
+        if (err) {
+          return res.status(400).json({
+            success: false,
+            message: err.message
+          });
+        }
+
+        if (!req.file) {
+          return res.status(400).json({
+            success: false,
+            message: 'No file uploaded. Please use the "logo" field.'
+          });
+        }
+
+        const s3Key = req.file.key;
+
+        try {
+          // 4. Update the store's logo_url in the database with the S3 key
+          const updateResult = await database.query(
+            `UPDATE stores SET logo_url = $1, updated_on = NOW() WHERE id = $2 RETURNING logo_url`,
+            [s3Key, storeId]
+          );
+
+          if (updateResult.rows.length === 0) {
+            return res.status(404).json({
+              success: false,
+              message: 'Store not found'
+            });
+          }
+
+          // 5. Send success response
+          res.json({
+            success: true,
+            message: 'Logo uploaded successfully',
+            data: {
+              logo_url: s3Service.getFileUrl(updateResult.rows[0].logo_url)
+            }
+          });
+        } catch (dbError) {
+          next(dbError);
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Get Store Logo
+router.get('/:storeId/logo', authenticateToken, generalLimiter, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId } = req.params;
+
+    // Check if user has permission to access this store
+    const permissionResult = await database.query(
+      `SELECT role FROM store_users WHERE store_id = $1 AND user_id = $2`,
+      [storeId, userId]
+    );
+
+    if (permissionResult.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to access this store'
+      });
+    }
+
+    // Fetch the logo_url from the database
+    const result = await database.query(
+      `SELECT logo_url FROM stores WHERE id = $1`,
+      [storeId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    const store = result.rows[0];
+
+    if (!store.logo_url) {
+        return res.status(404).json({
+            success: false,
+            message: 'Logo not found for this store'
+        });
+    }
+
+    // Gracefully handle both full URLs and S3 keys stored in the logo_url field.
+    let s3Key;
+    try {
+      const url = new URL(store.logo_url);
+      // For localstack, the path includes the bucket name, so we need to remove it.
+      const bucketName = s3Service.bucketName;
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        s3Key = url.pathname.substring(`/${bucketName}/`.length);
+      } else {
+        s3Key = url.pathname.substring(1); // For standard S3, remove the leading '/'
+      }
+    } catch (e) {
+      // If it's not a valid URL, assume it's an S3 key directly.
+      s3Key = store.logo_url;
+    }
+
+    // Get file stream from S3 and pipe to response
+    const readStream = s3Service.getFileStream(s3Key);
+    readStream.on('error', (err) => {
+        // Handle errors, e.g., file not found in S3
+        if (err.code === 'NoSuchKey') {
+            return res.status(404).json({
+                success: false,
+                message: 'Logo file not found in storage.'
+            });
+        }
+        next(err);
+    }).pipe(res);
   } catch (error) {
     next(error);
   }

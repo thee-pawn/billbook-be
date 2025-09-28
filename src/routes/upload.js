@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const s3Service = require('../services/s3Service');
 const { authenticateToken } = require('../middleware/auth');
-const { uploadLimiter } = require('../middleware/rateLimiter');
+const { uploadLimiter, generalLimiter } = require('../middleware/rateLimiter');
 
 // Single file upload
 router.post('/single', authenticateToken, uploadLimiter, (req, res, next) => {
@@ -155,3 +155,50 @@ router.get('/list', authenticateToken, async (req, res, next) => {
 });
 
 module.exports = router;
+
+// Get file by key (streams from S3)
+router.get('/file/*', authenticateToken, generalLimiter, async (req, res, next) => {
+  try {
+    const key = req.params[0]; // supports nested keys with slashes
+
+    if (!key) {
+      return res.status(400).json({
+        success: false,
+        message: 'File key is required'
+      });
+    }
+
+    // Set basic headers; attempt simple mime inference by extension
+    const lower = key.toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) contentType = 'image/jpeg';
+    else if (lower.endsWith('.png')) contentType = 'image/png';
+    else if (lower.endsWith('.gif')) contentType = 'image/gif';
+    else if (lower.endsWith('.pdf')) contentType = 'application/pdf';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${key.split('/').pop()}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+
+    const stream = s3Service.getFileStream(key);
+    stream.on('error', (err) => {
+      if (err && (err.code === 'NoSuchKey' || err.code === 'NotFound')) {
+        // Ensure no partial data was sent before writing JSON
+        if (!res.headersSent) {
+          return res.status(404).json({
+            success: false,
+            message: 'File not found'
+          });
+        }
+        // If headers have been sent, just end the response
+        try { res.end(); } catch (_) {}
+        return;
+      }
+      next(err);
+    });
+
+    stream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});

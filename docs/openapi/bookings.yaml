@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Bookings API
+  version: 1.0.0
+  description: Manage bookings with items and server-side totals
+servers:
+  - url: /api/v1
+paths:
+  /store/{storeId}/bookings:
+    post:
+      summary: Create a booking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBooking' }
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: List bookings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/Status' }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /store/{storeId}/bookings/{bookingId}:
+    get:
+      summary: Get booking by id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: bookingId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+    put:
+      summary: Update booking (replace items)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: bookingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBooking' }
+      responses:
+        '200': { description: Updated }
+        '404': { description: Not found }
+    delete:
+      summary: Soft delete booking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: bookingId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+        '404': { description: Not found }
+  /store/{storeId}/bookings/{bookingId}/status:
+    patch:
+      summary: Update booking status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: bookingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: '#/components/schemas/Status' }
+              required: [status]
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Status:
+      type: string
+      enum: [scheduled, in-progress, completed, cancelled]
+    BookingItem:
+      type: object
+      required: [service_id, service_name, unit_price]
+      properties:
+        service_id: { type: string, format: uuid }
+        service_name: { type: string }
+        unit_price: { type: number, format: float }
+        staff_id: { type: string, format: uuid, nullable: true }
+        staff_name: { type: string, nullable: true }
+        quantity: { type: integer, minimum: 1, default: 1 }
+        scheduled_at: { type: string, format: date-time, nullable: true }
+        venue: { type: string, nullable: true }
+    CreateBooking:
+      type: object
+      required: [country_code, contact_no, customer_name, gender, booking_datetime, venue_type, payment_mode, items]
+      properties:
+        customer_id: { type: string, format: uuid, nullable: true }
+        country_code: { type: string, example: "+91" }
+        contact_no: { type: string, example: "9876543210" }
+        customer_name: { type: string }
+        gender: { type: string, enum: [male, female, other] }
+        email: { type: string, format: email }
+        address: { type: string }
+        booking_datetime: { type: string, format: date-time }
+        venue_type: { type: string, enum: [indoor, outdoor] }
+        remarks: { type: string }
+        advance_amount: { type: number, format: float }
+        payment_mode: { type: string, enum: [cash, card, online] }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/BookingItem' }

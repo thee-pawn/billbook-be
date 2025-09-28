@@ -23,6 +23,10 @@ const staffRoutes = require('./staff');
 const attendanceRoutes = require('./attendance');
 const messagingRoutes = require('./messaging');
 const staffPaymentsRoutes = require('./staffPayments');
+const appointmentsRoutes = require('./appointments');
+const enquiriesRoutes = require('./enquiries');
+const bookingsRoutes = require('./bookings');
+const billingRoutes = require('./billing');
 
 // Mount all route modules
 router.use('/auth', authRoutes);
@@ -43,6 +47,10 @@ router.use('/staff', staffRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/messaging', messagingRoutes);
 router.use('/staff-payments', staffPaymentsRoutes);
+router.use('/', bookingsRoutes); // provides /store/:storeId/bookings endpoints
+router.use('/', appointmentsRoutes); // provides /store/:storeId/appointments endpoints
+router.use('/', billingRoutes); // provides /billing/:storeId/* endpoints
+router.use('/enquiries', enquiriesRoutes);
 
 // Health check endpoint
 router.get('/health', async (req, res) => {

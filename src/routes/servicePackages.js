@@ -143,7 +143,7 @@ router.get('/:storeId/:packageId', authenticateToken, generalLimiter, async (req
       });
     }
 
-    const package = packageResult.rows[0];
+    const pkg = packageResult.rows[0];
 
     // Get package items with service details
     const itemsResult = await database.query(
@@ -157,14 +157,14 @@ router.get('/:storeId/:packageId', authenticateToken, generalLimiter, async (req
 
     // Build the response object matching your structure
     const packageData = {
-      id: package.id,
-      packageName: package.package_name,
-      description: package.description,
-      price: parseFloat(package.price),
+      id: pkg.id,
+      packageName: pkg.package_name,
+      description: pkg.description,
+      price: parseFloat(pkg.price),
       validity: {
-        years: package.validity_years,
-        months: package.validity_months,
-        days: package.validity_days
+        years: pkg.validity_years,
+        months: pkg.validity_months,
+        days: pkg.validity_days
       },
       services: itemsResult.rows.map(item => ({
         serviceId: item.service_id,
@@ -176,9 +176,9 @@ router.get('/:storeId/:packageId', authenticateToken, generalLimiter, async (req
         servicePrice: parseFloat(item.service_price),
         serviceDuration: item.duration
       })),
-      status: package.status,
-      created_at: package.created_at,
-      updated_at: package.updated_at
+      status: pkg.status,
+      created_at: pkg.created_at,
+      updated_at: pkg.updated_at
     };
 
     res.json({
@@ -317,7 +317,6 @@ router.put('/:storeId/:packageId', authenticateToken, generalLimiter, validate(s
       'SELECT id FROM service_packages WHERE id = $1 AND store_id = $2',
       [packageId, storeId]
     );
-
     if (existingPackage.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -358,10 +357,10 @@ router.put('/:storeId/:packageId', authenticateToken, generalLimiter, validate(s
 
       simpleFields.forEach(field => {
         if (updateFields[field] !== undefined) {
-          const dbField = dbFieldMap[field] || field;
-          packageUpdateFields.push(`${dbField} = $${paramCount}`);
-          packageUpdateValues.push(updateFields[field]);
-          paramCount++;
+            const dbField = dbFieldMap[field] || field;
+            packageUpdateFields.push(`${dbField} = $${paramCount}`);
+            packageUpdateValues.push(updateFields[field]);
+            paramCount++;
         }
       });
 

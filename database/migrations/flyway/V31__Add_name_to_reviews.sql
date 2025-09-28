@@ -1,0 +1,3 @@
+
+ALTER TABLE reviews
+ADD COLUMN name TEXT;

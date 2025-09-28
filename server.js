@@ -21,13 +21,27 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration with allowlist
+const allowedOrigins = config.corsOrigins || (config.corsOrigin ? [config.corsOrigin] : ['*']);
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // non-browser or same-origin
+    if (allowedOrigins.includes('*')) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Also allow localhost with any port if wildcard dev
+    const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+    if (isLocalhost && allowedOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Preflight handling
+app.options('*', cors());
 
 // Compression middleware
 app.use(compression());
@@ -107,6 +121,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (config.nodeEnv !== 'test') {
+  startServer();
+}
 
 module.exports = app;
