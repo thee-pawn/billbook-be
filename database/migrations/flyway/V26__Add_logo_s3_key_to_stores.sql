@@ -1,0 +1,1 @@
+ALTER TABLE stores ADD COLUMN logo_s3_key VARCHAR(1024);

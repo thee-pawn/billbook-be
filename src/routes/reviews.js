@@ -28,7 +28,8 @@ function buildReviewResponse(review) {
     review: review.review,
     status: review.status,
     createdAt: review.created_at,
-    updatedAt: review.updated_at
+    updatedAt: review.updated_at,
+      name: review.name
   };
 }
 
@@ -156,7 +157,8 @@ router.post('/', generalLimiter, validate(schemas.createReview), async (req, res
       staffRating,
       hospitalityRating,
       serviceRating,
-      review = ''
+      review = '',
+        name,
     } = req.body;
 
     // Check if store exists
@@ -189,11 +191,11 @@ router.post('/', generalLimiter, validate(schemas.createReview), async (req, res
     const result = await database.query(
       `INSERT INTO reviews (
         store_id, referring_id, staff_rating, hospitality_rating, 
-        service_rating, review, status, created_at, updated_at
+        service_rating, review, status, created_at, updated_at, name
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, 'active', NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, 'active', NOW(), NOW(), $7
       ) RETURNING *`,
-      [storeId, referringId, staffRating, hospitalityRating, serviceRating, review]
+      [storeId, referringId, staffRating, hospitalityRating, serviceRating, review, name]
     );
 
     const createdReview = result.rows[0];

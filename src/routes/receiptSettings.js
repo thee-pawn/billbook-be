@@ -55,6 +55,7 @@ router.get('/:storeId/receipt-settings', authenticateToken, async (req, res, nex
             customer_contact: false,
             discount: false,
             notes: null,
+            phone_numbers: '',
             updated_at: null
           }
         }
@@ -80,6 +81,7 @@ router.get('/:storeId/receipt-settings', authenticateToken, async (req, res, nex
           customer_contact: settings.customer_contact,
           discount: settings.discount,
           notes: settings.notes,
+          phone_numbers: settings.phone_numbers || '',
           updated_at: settings.updated_at
         }
       }
@@ -94,7 +96,7 @@ router.post('/:storeId/receipt-settings', authenticateToken, generalLimiter, val
   try {
     const userId = req.user.id;
     const { storeId } = req.params;
-    const { logo, gst_no, staff_name, loyalty_points, wallet_balance, payment_method, date_time, customer_contact, discount, notes } = req.body;
+    const { logo, gst_no, staff_name, loyalty_points, wallet_balance, payment_method, date_time, customer_contact, discount, notes, phone_numbers } = req.body;
 
     // Convert notes array to JSON string for JSONB storage
     const notesJson = notes ? JSON.stringify(notes) : null;
@@ -130,22 +132,22 @@ router.post('/:storeId/receipt-settings', authenticateToken, generalLimiter, val
         `UPDATE receipt_settings 
          SET logo = $1, gst_no = $2, staff_name = $3, loyalty_points = $4, 
              wallet_balance = $5, payment_method = $6, date_time = $7, 
-             customer_contact = $8, discount = $9, notes = $10, updated_at = NOW()
-         WHERE store_id = $11
+             customer_contact = $8, discount = $9, notes = $10, phone_numbers = $11, updated_at = NOW()
+         WHERE store_id = $12
          RETURNING *`,
-        [logo, gst_no, staff_name, loyalty_points, wallet_balance, payment_method, 
-         date_time, customer_contact, discount, notesJson, storeId]
+        [logo, gst_no, staff_name, loyalty_points, wallet_balance, payment_method,
+         date_time, customer_contact, discount, notesJson, phone_numbers || '', storeId]
       );
     } else {
       // Create new settings
       result = await database.query(
         `INSERT INTO receipt_settings (store_id, logo, gst_no, staff_name, loyalty_points, 
                                      wallet_balance, payment_method, date_time, customer_contact, 
-                                     discount, notes, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+                                     discount, notes, phone_numbers, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
          RETURNING *`,
-        [storeId, logo, gst_no, staff_name, loyalty_points, wallet_balance, 
-         payment_method, date_time, customer_contact, discount, notesJson]
+        [storeId, logo, gst_no, staff_name, loyalty_points, wallet_balance,
+         payment_method, date_time, customer_contact, discount, notesJson, phone_numbers || '']
       );
     }
 
@@ -168,6 +170,7 @@ router.post('/:storeId/receipt-settings', authenticateToken, generalLimiter, val
           customer_contact: settings.customer_contact,
           discount: settings.discount,
           notes: settings.notes,
+          phone_numbers: settings.phone_numbers || '',
           updated_at: settings.updated_at
         }
       }
@@ -263,6 +266,7 @@ router.put('/:storeId/receipt-settings', authenticateToken, generalLimiter, vali
           customer_contact: settings.customer_contact,
           discount: settings.discount,
           notes: settings.notes,
+          phone_numbers: settings.phone_numbers || '',
           updated_at: settings.updated_at
         }
       }

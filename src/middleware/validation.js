@@ -6,6 +6,14 @@ const validate = (schema) => {
     
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join(', ');
+      // Log validation failure with request context
+      try {
+        console.warn('[VALIDATION][BODY]', {
+          method: req.method,
+          url: req.originalUrl,
+          message: errorMessage
+        });
+      } catch (_) {}
       return res.status(400).json({
         success: false,
         message: 'Validation error',
@@ -23,6 +31,13 @@ const validateQuery = (schema) => {
     
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join(', ');
+      try {
+        console.warn('[VALIDATION][QUERY]', {
+          method: req.method,
+          url: req.originalUrl,
+          message: errorMessage
+        });
+      } catch (_) {}
       return res.status(400).json({
         success: false,
         message: 'Query validation error',
@@ -40,6 +55,13 @@ const validateParams = (schema) => {
     
     if (error) {
       const errorMessage = error.details.map(detail => detail.message).join(', ');
+      try {
+        console.warn('[VALIDATION][PARAMS]', {
+          method: req.method,
+          url: req.originalUrl,
+          message: errorMessage
+        });
+      } catch (_) {}
       return res.status(400).json({
         success: false,
         message: 'Parameter validation error',
@@ -121,7 +143,8 @@ const schemas = {
     country: Joi.string().max(100).optional(),
     pincode: Joi.string().max(20).optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
-    longitude: Joi.number().min(-180).max(180).optional()
+    longitude: Joi.number().min(-180).max(180).optional(),
+    logo_url: Joi.string().uri().max(500).optional()
   }),
 
   // Store update validation (all fields optional)
@@ -144,7 +167,8 @@ const schemas = {
     country: Joi.string().max(100).optional(),
     pincode: Joi.string().max(20).optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
-    longitude: Joi.number().min(-180).max(180).optional()
+    longitude: Joi.number().min(-180).max(180).optional(),
+    logo_url: Joi.string().uri().max(500).optional()
   }).min(1), // At least one field must be provided
 
   // Store user management validation
@@ -254,7 +278,8 @@ const schemas = {
     date_time: Joi.boolean().default(false),
     customer_contact: Joi.boolean().default(false),
     discount: Joi.boolean().default(false),
-    notes: Joi.array().items(Joi.string().max(500)).max(10).optional().allow(null)
+    notes: Joi.array().items(Joi.string().max(500)).max(10).optional().allow(null),
+    phone_numbers: Joi.string().pattern(/^[\d,\s+-]*$/).max(1000).optional().allow('')
   }),
 
   updateReceiptSettings: Joi.object({
@@ -267,7 +292,8 @@ const schemas = {
     date_time: Joi.boolean().optional(),
     customer_contact: Joi.boolean().optional(),
     discount: Joi.boolean().optional(),
-    notes: Joi.array().items(Joi.string().max(500)).max(10).optional().allow(null)
+    notes: Joi.array().items(Joi.string().max(500)).max(10).optional().allow(null),
+    phone_numbers: Joi.string().pattern(/^[\d,\s+-]*$/).max(1000).optional().allow('')
   }).min(1),
 
   // ID parameter validation
@@ -569,14 +595,26 @@ const schemas = {
     loyaltyPointsConversionRate: Joi.number().integer().min(1).required(),
     serviceLoyaltyPoints: Joi.number().integer().min(0).required(),
     productLoyaltyPoints: Joi.number().integer().min(0).required(),
-    membershipLoyaltyPoints: Joi.number().integer().min(0).required()
+  membershipLoyaltyPoints: Joi.number().integer().min(0).required(),
+  minServiceRedemption: Joi.number().integer().min(0).default(0),
+  maxServiceRedemption: Joi.number().integer().min(0).default(0),
+  minProductsRedemption: Joi.number().integer().min(0).default(0),
+  maxProductsRedemption: Joi.number().integer().min(0).default(0),
+  minMembershipRedemption: Joi.number().integer().min(0).default(0),
+  maxMembershipRedemption: Joi.number().integer().min(0).default(0)
   }),
 
   updateLoyaltyPointsConfiguration: Joi.object({
     loyaltyPointsConversionRate: Joi.number().integer().min(1).optional(),
     serviceLoyaltyPoints: Joi.number().integer().min(0).optional(),
     productLoyaltyPoints: Joi.number().integer().min(0).optional(),
-    membershipLoyaltyPoints: Joi.number().integer().min(0).optional()
+  membershipLoyaltyPoints: Joi.number().integer().min(0).optional(),
+  minServiceRedemption: Joi.number().integer().min(0).optional(),
+  maxServiceRedemption: Joi.number().integer().min(0).optional(),
+  minProductsRedemption: Joi.number().integer().min(0).optional(),
+  maxProductsRedemption: Joi.number().integer().min(0).optional(),
+  minMembershipRedemption: Joi.number().integer().min(0).optional(),
+  maxMembershipRedemption: Joi.number().integer().min(0).optional()
   }),
 
   // Coupon validation schemas
@@ -601,27 +639,15 @@ const schemas = {
     }).optional(),
     includedServices: Joi.object({
       allIncluded: Joi.boolean().default(false),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  inclusions: Joi.array().items(Joi.string().uuid()).optional().default([])
     }).optional(),
     includedProducts: Joi.object({
-      allIncluded: Joi.boolean().default(false),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  allIncluded: Joi.boolean().default(false),
+  inclusions: Joi.array().items(Joi.string().uuid()).optional().default([])
     }).optional(),
     includedMemberships: Joi.object({
-      allIncluded: Joi.boolean().default(false),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  allIncluded: Joi.boolean().default(false),
+  inclusions: Joi.array().items(Joi.string().uuid()).optional().default([])
     }).optional(),
     status: Joi.string().valid('active', 'inactive').default('active')
   }),
@@ -646,28 +672,16 @@ const schemas = {
       limitRefereshDays: Joi.number().integer().min(1).optional()
     }).optional(),
     includedServices: Joi.object({
-      allIncluded: Joi.boolean().required(),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  allIncluded: Joi.boolean().required(),
+  inclusions: Joi.array().items(Joi.string().uuid()).optional()
     }).optional(),
     includedProducts: Joi.object({
-      allIncluded: Joi.boolean().required(),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  allIncluded: Joi.boolean().required(),
+  inclusions: Joi.array().items(Joi.string().uuid()).optional()
     }).optional(),
     includedMemberships: Joi.object({
-      allIncluded: Joi.boolean().required(),
-      inclusions: Joi.when('allIncluded', {
-        is: false,
-        then: Joi.array().items(Joi.string().uuid()).optional(),
-        otherwise: Joi.forbidden()
-      })
+  allIncluded: Joi.boolean().required(),
+  inclusions: Joi.array().items(Joi.string().uuid()).optional()
     }).optional(),
     status: Joi.string().valid('active', 'inactive', 'expired').optional()
   }),
@@ -682,6 +696,17 @@ const schemas = {
     sortOrder: Joi.string().valid('asc', 'desc').default('desc')
   }),
 
+  // Eligible coupons query validation
+  eligibleCouponsQuery: Joi.object({
+    customerId: Joi.string().uuid().optional(),
+    phoneNumber: Joi.string().trim().pattern(/^\+?[1-9]\d{1,14}$/).optional(),
+    orderAmount: Joi.number().precision(2).min(0).optional(),
+    date: Joi.date().iso().optional(),
+    serviceIds: Joi.array().items(Joi.string().uuid()).default([]).optional(),
+    productIds: Joi.array().items(Joi.string().uuid()).default([]).optional(),
+    membershipIds: Joi.array().items(Joi.string().uuid()).default([]).optional()
+  }),
+
   // Coupon validation (for applying coupon)
   validateCoupon: Joi.object({
     couponCode: Joi.string().trim().min(1).max(100).required(),
@@ -689,6 +714,16 @@ const schemas = {
     serviceIds: Joi.array().items(Joi.string().uuid()).optional(),
     productIds: Joi.array().items(Joi.string().uuid()).optional(),
     membershipIds: Joi.array().items(Joi.string().uuid()).optional()
+  }),
+
+  // Customer notes validation
+  createCustomerNote: Joi.object({
+    note: Joi.string().trim().min(1).max(5000).required(),
+    starred: Joi.boolean().default(false)
+  }),
+  updateCustomerNote: Joi.object({
+    note: Joi.string().trim().min(1).max(5000).optional(),
+    starred: Joi.boolean().optional()
   }),
 
   // Customer validation schemas
@@ -754,7 +789,8 @@ const schemas = {
     staffRating: Joi.number().integer().min(1).max(5).required(),
     hospitalityRating: Joi.number().integer().min(1).max(5).required(),
     serviceRating: Joi.number().integer().min(1).max(5).required(),
-    review: Joi.string().trim().max(2000).allow('').default('')
+    review: Joi.string().trim().max(2000).allow('').default(''),
+    name: Joi.string().trim().min(1).max(255).optional()
   }),
 
   reviewQuery: Joi.object({
@@ -776,7 +812,7 @@ const schemas = {
     amount: Joi.number().precision(2).min(0).required(),
     paymentMethod: Joi.string().trim().min(1).max(50).required(),
     description: Joi.string().trim().max(1000).allow('').default(''),
-    receipt_id: Joi.string().trim().max(255).allow('').default('')
+  receipt_id: Joi.string().trim().max(255).allow('', null).default('')
   }),
 
   updateExpense: Joi.object({
@@ -787,7 +823,7 @@ const schemas = {
     amount: Joi.number().precision(2).min(0).optional(),
     paymentMethod: Joi.string().trim().min(1).max(50).optional(),
     description: Joi.string().trim().max(1000).allow('').optional(),
-    receipt_id: Joi.string().trim().max(255).allow('').optional()
+  receipt_id: Joi.string().trim().max(255).allow('', null).optional()
   }),
 
   expenseQuery: Joi.object({

@@ -5,6 +5,29 @@ const { authenticateToken } = require('../middleware/auth');
 const { generalLimiter } = require('../middleware/rateLimiter');
 const database = require('../config/database');
 
+// Helper to resolve employee identifier (staff.id or users.id) to users.id for a store
+async function resolveEmployeeUserId(storeId, employeeIdentifier) {
+  // Try as staff.id first (active in this store)
+  const byStaffId = await database.query(
+    'SELECT user_id FROM staff WHERE id = $1 AND store_id = $2 AND status = $3',
+    [employeeIdentifier, storeId, 'active']
+  );
+  if (byStaffId.rows.length > 0) {
+    return byStaffId.rows[0].user_id;
+  }
+
+  // Try as users.id (must have an active staff row in this store)
+  const byUserId = await database.query(
+    'SELECT user_id FROM staff WHERE user_id = $1 AND store_id = $2 AND status = $3',
+    [employeeIdentifier, storeId, 'active']
+  );
+  if (byUserId.rows.length > 0) {
+    return employeeIdentifier;
+  }
+
+  return null;
+}
+
 // Helper function to check store access
 async function checkStoreAccess(storeId, userId) {
   try {
@@ -71,6 +94,11 @@ async function buildExpenseResponse(expense) {
 // Get all expenses for a store
 router.get('/:storeId', authenticateToken, generalLimiter, validateQuery(schemas.expenseQuery), async (req, res, next) => {
   try {
+  // Prevent caching of dynamic expense data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
     const userId = req.user.id;
     const { storeId } = req.params;
     const {
@@ -102,11 +130,17 @@ router.get('/:storeId', authenticateToken, generalLimiter, validateQuery(schemas
     let queryParams = [storeId];
     let paramCount = 2;
 
-    // Add employee filter
+    // Add employee filter (accept staff.id or users.id)
     if (employee_id) {
-      baseQuery += ` AND employee_id = $${paramCount}`;
-      queryParams.push(employee_id);
-      paramCount++;
+      const resolvedUserId = await resolveEmployeeUserId(storeId, employee_id);
+      // If cannot resolve, ensure no results match by using impossible condition
+      if (!resolvedUserId) {
+        baseQuery += ` AND 1 = 0`;
+      } else {
+        baseQuery += ` AND employee_id = $${paramCount}`;
+        queryParams.push(resolvedUserId);
+        paramCount++;
+      }
     }
 
     // Add category filter
@@ -229,6 +263,9 @@ router.get('/:storeId', authenticateToken, generalLimiter, validateQuery(schemas
 // Get expense statistics for a store (MUST BE BEFORE /:storeId/:expenseId route)
 router.get('/:storeId/statistics', authenticateToken, generalLimiter, async (req, res, next) => {
   try {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
     const userId = req.user.id;
     const { storeId } = req.params;
 
@@ -323,6 +360,9 @@ router.get('/:storeId/statistics', authenticateToken, generalLimiter, async (req
 // Get a single expense (MUST BE AFTER /statistics route)
 router.get('/:storeId/:expenseId', authenticateToken, generalLimiter, async (req, res, next) => {
   try {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
     const userId = req.user.id;
     const { storeId, expenseId } = req.params;
 
@@ -396,16 +436,12 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
       });
     }
 
-    // Verify employee exists and has access to this store
-    const employeeCheck = await database.query(
-      'SELECT id FROM store_users WHERE store_id = $1 AND user_id = $2',
-      [storeId, employee_id]
-    );
-
-    if (employeeCheck.rows.length === 0) {
+    // Resolve employee (accept staff.id or users.id) and validate active association
+    const resolvedUserId = await resolveEmployeeUserId(storeId, employee_id);
+  if (!resolvedUserId) {
       return res.status(400).json({
         success: false,
-        message: 'Employee is not associated with this store'
+    message: 'Employee (by staff.id or users.id) is not associated with this store or is not active'
       });
     }
 
@@ -417,7 +453,7 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW(), NOW()
       ) RETURNING *`,
-      [storeId, employee_id, expenseName, date, category, amount, paymentMethod, description, receipt_id]
+  [storeId, resolvedUserId, expenseName, date, category, amount, paymentMethod, description, receipt_id]
     );
 
     const createdExpense = result.rows[0];
@@ -482,6 +518,18 @@ router.put('/:storeId/:expenseId', authenticateToken, generalLimiter, validate(s
       });
     }
 
+    // If employee_id is being updated, resolve it to users.id via staff mapping first
+    if (updateData.employee_id) {
+      const resolvedUserId = await resolveEmployeeUserId(storeId, updateData.employee_id);
+      if (!resolvedUserId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Employee is not associated with this store or is not active'
+        });
+      }
+      updateData.employee_id = resolvedUserId;
+    }
+
     // Build update query dynamically
     const updateFields = [];
     const values = [];
@@ -513,20 +561,7 @@ router.put('/:storeId/:expenseId', authenticateToken, generalLimiter, validate(s
       });
     }
 
-    // Verify employee exists if employee_id is being updated
-    if (updateData.employee_id) {
-      const employeeCheck = await database.query(
-        'SELECT id FROM store_users WHERE store_id = $1 AND user_id = $2',
-        [storeId, updateData.employee_id]
-      );
-
-      if (employeeCheck.rows.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Employee is not associated with this store'
-        });
-      }
-    }
+  // No further employee verification needed here since we've resolved above
 
     // Add updated_at and expense id and store id
     updateFields.push(`updated_at = NOW()`);

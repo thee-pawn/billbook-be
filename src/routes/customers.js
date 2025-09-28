@@ -232,6 +232,53 @@ router.get('/:storeId', authenticateToken, generalLimiter, validateQuery(schemas
 });
 
 // Get a single customer with all details
+// Get customer by phone number (must be before :customerId route to avoid conflict)
+router.get('/:storeId/by-phone/:phoneNumber', authenticateToken, generalLimiter, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId, phoneNumber } = req.params;
+
+    // Simple normalization: trim and remove spaces
+    const normalizedPhone = phoneNumber.trim();
+    // if (!/^\d{6,15}$/.test(normalizedPhone)) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Invalid phone number format'
+    //   });
+    // }
+
+    // Access check
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this store'
+      });
+    }
+
+    const customerResult = await database.query(
+      'SELECT * FROM customers WHERE store_id = $1 AND phone_number = $2',
+      [storeId, normalizedPhone]
+    );
+
+    if (customerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    const customerData = await buildCustomerResponse(customerResult.rows[0]);
+    res.json({
+      success: true,
+      message: 'Customer retrieved successfully',
+      data: { customer: customerData }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/:storeId/:customerId', authenticateToken, generalLimiter, async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -332,6 +379,161 @@ router.post('/:storeId', authenticateToken, generalLimiter, validate(schemas.cre
     next(error);
   }
 });
+
+// Create a note for a customer
+router.post('/:storeId/:customerId/notes', authenticateToken, generalLimiter, validate(schemas.createCustomerNote), async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId, customerId } = req.params;
+    const { note, starred = false } = req.body;
+
+    // Access check
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+    }
+
+    // Ensure customer belongs to the store
+    const cust = await database.query('SELECT id FROM customers WHERE id = $1 AND store_id = $2', [customerId, storeId]);
+    if (cust.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const result = await database.query(
+      `INSERT INTO customer_notes (customer_id, notes, starred, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *`,
+      [customerId, note, starred]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Customer note created successfully',
+      data: { note: mapCustomerNote(result.rows[0]) }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update a customer note
+router.put('/:storeId/:customerId/notes/:noteId', authenticateToken, generalLimiter, validate(schemas.updateCustomerNote), async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId, customerId, noteId } = req.params;
+    const { note, starred } = req.body;
+
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+    }
+
+    // Validate customer and note relationship
+    const noteRes = await database.query(
+      `SELECT cn.* FROM customer_notes cn
+       JOIN customers c ON c.id = cn.customer_id
+       WHERE cn.id = $1 AND cn.customer_id = $2 AND c.store_id = $3`,
+      [noteId, customerId, storeId]
+    );
+    if (noteRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Note not found for this customer' });
+    }
+
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    if (note !== undefined) { fields.push(`notes = $${idx++}`); values.push(note); }
+    if (starred !== undefined) { fields.push(`starred = $${idx++}`); values.push(starred); }
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+    fields.push('updated_at = NOW()');
+    values.push(noteId);
+
+    const updateSql = `UPDATE customer_notes SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+    const updated = await database.query(updateSql, values);
+
+    res.json({
+      success: true,
+      message: 'Customer note updated successfully',
+      data: { note: mapCustomerNote(updated.rows[0]) }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all notes for a customer
+router.get('/:storeId/:customerId/notes', authenticateToken, generalLimiter, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId, customerId } = req.params;
+
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+    }
+
+    const cust = await database.query('SELECT id FROM customers WHERE id = $1 AND store_id = $2', [customerId, storeId]);
+    if (cust.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const notesRes = await database.query(
+      `SELECT * FROM customer_notes WHERE customer_id = $1 ORDER BY starred DESC, created_at DESC`,
+      [customerId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Customer notes retrieved successfully',
+      data: { notes: notesRes.rows.map(mapCustomerNote) }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete a note by id
+router.delete('/:storeId/:customerId/notes/:noteId', authenticateToken, generalLimiter, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId, customerId, noteId } = req.params;
+
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+    }
+
+    // Ensure note belongs to customer and store
+    const noteRes = await database.query(
+      `SELECT cn.id FROM customer_notes cn
+       JOIN customers c ON c.id = cn.customer_id
+       WHERE cn.id = $1 AND cn.customer_id = $2 AND c.store_id = $3`,
+      [noteId, customerId, storeId]
+    );
+    if (noteRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Note not found for this customer' });
+    }
+
+    await database.query('DELETE FROM customer_notes WHERE id = $1', [noteId]);
+
+    res.json({ success: true, message: 'Customer note deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Helper to map DB note row to API shape
+function mapCustomerNote(row) {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    note: row.notes,
+    starred: row.starred,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
 
 // Update customer
 router.put('/:storeId/:customerId', authenticateToken, generalLimiter, validate(schemas.updateCustomer), async (req, res, next) => {

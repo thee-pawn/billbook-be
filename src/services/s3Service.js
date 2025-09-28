@@ -67,6 +67,15 @@ class S3Service {
     return `https://${this.bucketName}.s3.amazonaws.com/${key}`;
   }
 
+  // Get a file stream from S3
+  getFileStream(fileKey) {
+    const downloadParams = {
+      Key: fileKey,
+      Bucket: this.bucketName
+    };
+    return s3.getObject(downloadParams).createReadStream();
+  }
+
   // Create multer upload middleware for S3
   createUploadMiddleware(options = {}) {
     const {

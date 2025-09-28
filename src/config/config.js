@@ -5,6 +5,17 @@ const path = require('path');
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 dotenv.config({ path: path.join(__dirname, '..', '..', envFile) });
 
+// Parse comma-separated CORS origins from env
+function parseOrigins(input) {
+  if (!input) return null;
+  return input
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+const corsOrigins = parseOrigins(process.env.CORS_ORIGINS);
+
 module.exports = {
   // Server Configuration
   port: process.env.PORT || 3000,
@@ -12,6 +23,7 @@ module.exports = {
   apiVersion: process.env.API_VERSION || 'v1',
   logLevel: process.env.LOG_LEVEL || 'info',
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  corsOrigins: corsOrigins,
 
   // Database Configuration
   database: {

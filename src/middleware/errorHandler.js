@@ -4,11 +4,25 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
+  // Log error with request context
+  const context = {
+    method: req.method,
+    url: req.originalUrl,
+    params: req.params,
+    query: req.query,
+    userId: req.user?.id,
+    message: err.message,
+  };
   if (config.logLevel === 'debug' || config.nodeEnv === 'development') {
-    console.error('Error Details:', err);
+    // Avoid logging full sensitive bodies
+    try {
+      const bodyPreview = req.body && Object.keys(req.body).length ? '[BODY_PRESENT]' : '[NO_BODY]';
+      console.error('Error Details:', { ...context, body: bodyPreview, stack: err.stack });
+    } catch (_) {
+      console.error('Error Details:', context, err);
+    }
   } else {
-    console.error('Error:', err.message);
+    console.error('Error:', context);
   }
 
   // Mongoose bad ObjectId

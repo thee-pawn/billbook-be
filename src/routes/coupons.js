@@ -53,7 +53,8 @@ function buildCouponResponse(coupon, serviceInclusions = [], productInclusions =
     },
     status: coupon.status,
     created_at: coupon.created_at,
-    updated_at: coupon.updated_at
+    updated_at: coupon.updated_at,
+    usage: coupon.usage
   };
 }
 
@@ -856,3 +857,149 @@ router.post('/:storeId/validate', authenticateToken, generalLimiter, validate(sc
 });
 
 module.exports = router;
+
+// Get eligible coupons for a customer/order context
+router.get('/:storeId/eligible', authenticateToken, generalLimiter, validateQuery(schemas.eligibleCouponsQuery), async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { storeId } = req.params;
+    const {
+      customerId,
+      phoneNumber,
+      orderAmount,
+      date,
+      serviceIds = [],
+      productIds = [],
+      membershipIds = []
+    } = req.query;
+
+    // Check store access
+    const userRole = await checkStoreAccess(storeId, userId);
+    if (!userRole) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+    }
+
+    // Resolve customer by phone if provided and no customerId
+    let resolvedCustomerId = customerId;
+    if (!resolvedCustomerId && phoneNumber) {
+      const customerRes = await database.query(
+        'SELECT id FROM customers WHERE store_id = $1 AND phone_number = $2',
+        [storeId, phoneNumber.trim()]
+      );
+      if (customerRes.rows.length > 0) {
+        resolvedCustomerId = customerRes.rows[0].id;
+      }
+    }
+
+    // Build base query for active and date-valid coupons under store
+    const queryParams = [storeId];
+    let baseWhere = `WHERE c.store_id = $1 AND c.status = 'active'`;
+
+    // Apply date filter (use provided date or today)
+    if (date) {
+      queryParams.push(date);
+      baseWhere += ` AND c.valid_from <= $${queryParams.length} AND c.valid_till >= $${queryParams.length}`;
+    } else {
+      baseWhere += ` AND c.valid_from <= CURRENT_DATE AND c.valid_till >= CURRENT_DATE`;
+    }
+
+    // If orderAmount present, enforce minimum spend at DB level
+    if (orderAmount !== undefined) {
+      queryParams.push(orderAmount);
+      baseWhere += ` AND c.minimum_spend <= $${queryParams.length}`;
+    }
+
+    const couponsSql = `SELECT c.* FROM coupons c ${baseWhere} ORDER BY c.created_at DESC`;
+    const couponsRes = await database.query(couponsSql, queryParams);
+
+    const eligible = [];
+    for (const coupon of couponsRes.rows) {
+      // Check inclusions for provided items; if none provided for a category and not all included, we don't exclude based on that category
+      let ok = true;
+
+      if (!coupon.services_all_included && serviceIds && serviceIds.length > 0) {
+        const svcRes = await database.query('SELECT service_id FROM coupon_service_inclusions WHERE coupon_id = $1', [coupon.id]);
+        const included = new Set(svcRes.rows.map(r => r.service_id));
+        const hasIntersect = serviceIds.some(id => included.has(id));
+        if (!hasIntersect) ok = false;
+      }
+
+      if (!coupon.products_all_included && productIds && productIds.length > 0) {
+        const prodRes = await database.query('SELECT product_id FROM coupon_product_inclusions WHERE coupon_id = $1', [coupon.id]);
+        const included = new Set(prodRes.rows.map(r => r.product_id));
+        const hasIntersect = productIds.some(id => included.has(id));
+        if (!hasIntersect) ok = false;
+      }
+
+      if (!coupon.memberships_all_included && membershipIds && membershipIds.length > 0) {
+        const memRes = await database.query('SELECT membership_id FROM coupon_membership_inclusions WHERE coupon_id = $1', [coupon.id]);
+        const included = new Set(memRes.rows.map(r => r.membership_id));
+        const hasIntersect = membershipIds.some(id => included.has(id));
+        if (!hasIntersect) ok = false;
+      }
+
+      if (!ok) continue;
+
+      // Check per-user usage limit if customer identified
+      let usageExceeded = false;
+      if (resolvedCustomerId && coupon.usage_limit && coupon.limit_refresh_days) {
+        const usageCount = await database.query(
+          `SELECT COUNT(*) FROM coupon_usage 
+           WHERE coupon_id = $1 AND user_id = $2 
+           AND usage_date >= NOW() - INTERVAL '${coupon.limit_refresh_days} days'`,
+          [coupon.id, resolvedCustomerId]
+        );
+        usageExceeded = parseInt(usageCount.rows[0].count) >= coupon.usage_limit;
+      }
+      if (usageExceeded) continue;
+
+      // Gather inclusions for response consistency
+      let serviceInclusions = [];
+      if (!coupon.services_all_included) {
+        const serviceResult = await database.query('SELECT service_id FROM coupon_service_inclusions WHERE coupon_id = $1', [coupon.id]);
+        serviceInclusions = serviceResult.rows.map(row => row.service_id);
+      }
+      let productInclusions = [];
+      if (!coupon.products_all_included) {
+        const productResult = await database.query('SELECT product_id FROM coupon_product_inclusions WHERE coupon_id = $1', [coupon.id]);
+        productInclusions = productResult.rows.map(row => row.product_id);
+      }
+      let membershipInclusions = [];
+      if (!coupon.memberships_all_included) {
+        const membershipResult = await database.query('SELECT membership_id FROM coupon_membership_inclusions WHERE coupon_id = $1', [coupon.id]);
+        membershipInclusions = membershipResult.rows.map(row => row.membership_id);
+      }
+
+      const couponData = buildCouponResponse(coupon, serviceInclusions, productInclusions, membershipInclusions);
+
+      // Optional compute discount preview
+      let computed = undefined;
+      if (orderAmount !== undefined) {
+        let discountAmount;
+        if (coupon.discount_type === 'percentage') {
+          discountAmount = (orderAmount * parseFloat(coupon.discount_value)) / 100;
+          if (coupon.maximum_discount && discountAmount > parseFloat(coupon.maximum_discount)) {
+            discountAmount = parseFloat(coupon.maximum_discount);
+          }
+        } else {
+          discountAmount = Math.min(parseFloat(coupon.discount_value), parseFloat(orderAmount));
+        }
+        const finalAmount = Math.max(0, parseFloat(orderAmount) - discountAmount);
+        computed = {
+          amount: parseFloat(discountAmount.toFixed(2)),
+          finalAmount: parseFloat(finalAmount.toFixed(2))
+        };
+      }
+
+      eligible.push({ ...couponData, computed });
+    }
+
+    res.json({
+      success: true,
+      message: 'Eligible coupons retrieved successfully',
+      data: { coupons: eligible }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
