@@ -13,7 +13,7 @@ yarn-error.log*
 .env.test
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
