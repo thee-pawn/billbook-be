@@ -25,19 +25,44 @@ app.use(helmet());
 const allowedOrigins = config.corsOrigins || (config.corsOrigin ? [config.corsOrigin] : ['*']);
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // non-browser or same-origin
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow all origins if wildcard is set
     if (allowedOrigins.includes('*')) return callback(null, true);
+
+    // Check exact match
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Also allow localhost with any port if wildcard dev
+
+    // Check for AWS Amplify domains (*.amplifyapp.com)
+    const isAmplifyDomain = /^https:\/\/[a-zA-Z0-9-]+\.amplifyapp\.com$/.test(origin);
+    if (isAmplifyDomain) return callback(null, true);
+
+    // Check for localhost with any port (development)
     const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
-    if (isLocalhost && allowedOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
+    if (isLocalhost && (config.nodeEnv === 'development' || allowedOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1')))) {
       return callback(null, true);
     }
+
+    // Check for wildcard patterns in allowed origins
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin.includes('*')) {
+        const pattern = allowedOrigin.replace(/\*/g, '.*');
+        const regex = new RegExp(`^${pattern}$`);
+        return regex.test(origin);
+      }
+      return false;
+    });
+
+    if (isAllowed) return callback(null, true);
+
+    // Log the blocked origin for debugging
+    console.log(`CORS: Blocked origin - ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Preflight handling
