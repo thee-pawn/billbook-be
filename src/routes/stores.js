@@ -67,12 +67,35 @@ router.post('/', authenticateToken, generalLimiter, validate(schemas.createStore
         [store.id, userId, 'owner']
       );
 
+      // Create default shifts (all days closed)
+      console.log(`Creating default shifts for store: ${store.id}`);
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      for (const day of days) {
+        await database.query(
+          `INSERT INTO shifts (store_id, day, is_closed, created_on, updated_on)
+           VALUES ($1, $2, $3, NOW(), NOW())`,
+          [store.id, day, true]
+        );
+      }
+      console.log(`Created ${days.length} default shifts (all closed)`);
+
+      // Create default receipt settings (all params false)
+      console.log(`Creating default receipt settings for store: ${store.id}`);
+      await database.query(
+        `INSERT INTO receipt_settings (
+          store_id, logo, gst_no, staff_name, loyalty_points, 
+          wallet_balance, payment_method, date_time, customer_contact, discount, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+        [store.id, false, false, false, false, false, false, false, false, false]
+      );
+      console.log(`Created default receipt settings (all disabled)`);
+
       // Commit transaction
       await database.query('COMMIT');
 
       res.status(201).json({
         success: true,
-        message: 'Store created successfully',
+        message: 'Store created successfully with default shifts and receipt settings',
         data: {
           store: {
             id: store.id,
