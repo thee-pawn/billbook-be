@@ -34,99 +34,40 @@ console.log('Parsed corsOrigins:', corsOrigins);
 console.log('Node Environment:', config.nodeEnv);
 console.log('================================');
 
+// Manual CORS implementation to force headers
 app.use((req, res, next) => {
-    console.log(`=== CORS Debug - ${req.method} ${req.path} ===`);
-    console.log('Origin header:', req.get('Origin'));
-    console.log('Host header:', req.get('Host'));
-    console.log('Referer header:', req.get('Referer'));
-    console.log('X-Forwarded-Host:', req.get('X-Forwarded-Host'));
-    console.log('All headers:', JSON.stringify(req.headers, null, 2));
-    next();
-});
-
-app.use(cors({
-    origin: function (origin, callback) {
-        console.log(`CORS origin function called with: "${origin}"`);
-        console.log(`Available corsOrigins: [${corsOrigins.join(', ')}]`);
-
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) {
-            console.log('CORS: Allowing request with no origin');
-            return callback(null, true);
-        }
-
-        // Check if origin is in allowed list
-        if (corsOrigins.includes('*') || corsOrigins.includes(origin)) {
-            console.log(`CORS: Allowing origin "${origin}"`);
-            return callback(null, true);
-        }
-
-        console.log(`CORS BLOCKED - Origin: "${origin}", Allowed: [${corsOrigins.join(', ')}]`);
-        return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Content-Length', 'X-Request-ID'],
-    optionsSuccessStatus: 204 // For legacy browser support
-}));
-
-// Explicit OPTIONS handler to ensure preflight requests are handled properly
-app.options('*', (req, res) => {
-    console.log(`=== Explicit OPTIONS Handler - ${req.path} ===`);
-    console.log('Origin:', req.get('Origin'));
-
     const origin = req.get('Origin');
-    const corsOrigins = config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'];
+    console.log(`=== Manual CORS Handler - ${req.method} ${req.path} ===`);
+    console.log('Origin header:', origin);
+    console.log('Available corsOrigins:', corsOrigins);
 
     // Check if origin is allowed
-    if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+    const isOriginAllowed = !origin || corsOrigins.includes('*') || corsOrigins.includes(origin);
+
+    if (isOriginAllowed) {
+        // Force set CORS headers
         res.header('Access-Control-Allow-Origin', origin || '*');
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
         res.header('Access-Control-Allow-Credentials', 'true');
         res.header('Access-Control-Max-Age', '86400');
 
-        console.log('OPTIONS response headers set:', {
+        console.log('CORS headers set manually:', {
             'Access-Control-Allow-Origin': origin || '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
             'Access-Control-Allow-Credentials': 'true'
         });
 
-        return res.status(204).end();
+        // Handle preflight OPTIONS requests
+        if (req.method === 'OPTIONS') {
+            console.log('Handling OPTIONS preflight request');
+            return res.status(204).end();
+        }
     } else {
-        console.log('OPTIONS request blocked for origin:', origin);
+        console.log('CORS BLOCKED - Origin not allowed:', origin);
         return res.status(403).json({ error: 'CORS not allowed' });
     }
-});
-
-// Add response debugging middleware
-app.use((req, res, next) => {
-    const originalSend = res.send;
-    const originalJson = res.json;
-
-    res.send = function(data) {
-        console.log(`=== Response Headers Debug - ${req.method} ${req.path} ===`);
-        console.log('Access-Control-Allow-Origin:', res.get('Access-Control-Allow-Origin'));
-        console.log('Access-Control-Allow-Methods:', res.get('Access-Control-Allow-Methods'));
-        console.log('Access-Control-Allow-Headers:', res.get('Access-Control-Allow-Headers'));
-        console.log('Access-Control-Allow-Credentials:', res.get('Access-Control-Allow-Credentials'));
-        console.log('All response headers:', res.getHeaders());
-        console.log('===========================================');
-        return originalSend.call(this, data);
-    };
-
-    res.json = function(data) {
-        console.log(`=== Response Headers Debug - ${req.method} ${req.path} ===`);
-        console.log('Access-Control-Allow-Origin:', res.get('Access-Control-Allow-Origin'));
-        console.log('Access-Control-Allow-Methods:', res.get('Access-Control-Allow-Methods'));
-        console.log('Access-Control-Allow-Headers:', res.get('Access-Control-Allow-Headers'));
-        console.log('Access-Control-Allow-Credentials:', res.get('Access-Control-Allow-Credentials'));
-        console.log('All response headers:', res.getHeaders());
-        console.log('===========================================');
-        return originalJson.call(this, data);
-    };
 
     next();
 });
