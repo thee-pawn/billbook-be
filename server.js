@@ -27,17 +27,41 @@ app.use(compression());
 // CORS configuration - use environment variable
 const corsOrigins = config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'];
 
+// Debug logging
+console.log('=== CORS Configuration Debug ===');
+console.log('CORS_ORIGIN from env:', config.corsOrigin);
+console.log('Parsed corsOrigins:', corsOrigins);
+console.log('Node Environment:', config.nodeEnv);
+console.log('================================');
+
+app.use((req, res, next) => {
+    console.log(`=== CORS Debug - ${req.method} ${req.path} ===`);
+    console.log('Origin header:', req.get('Origin'));
+    console.log('Host header:', req.get('Host'));
+    console.log('Referer header:', req.get('Referer'));
+    console.log('X-Forwarded-Host:', req.get('X-Forwarded-Host'));
+    console.log('All headers:', JSON.stringify(req.headers, null, 2));
+    next();
+});
+
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) return callback(null, true);
+        console.log(`CORS origin function called with: "${origin}"`);
+        console.log(`Available corsOrigins: [${corsOrigins.join(', ')}]`);
 
-        // Check if origin is in allowed list
-        if (corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) {
+            console.log('CORS: Allowing request with no origin');
             return callback(null, true);
         }
 
-        console.log(`CORS blocked origin: ${origin}, allowed: ${corsOrigins.join(', ')}`);
+        // Check if origin is in allowed list
+        if (corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+            console.log(`CORS: Allowing origin "${origin}"`);
+            return callback(null, true);
+        }
+
+        console.log(`CORS BLOCKED - Origin: "${origin}", Allowed: [${corsOrigins.join(', ')}]`);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -76,6 +100,20 @@ app.get('/', (req, res) => {
     version: config.apiVersion,
     environment: config.nodeEnv,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Debug CORS endpoint
+app.get('/debug-cors', (req, res) => {
+  res.json({
+    success: true,
+    debug: {
+      origin: req.get('Origin'),
+      referer: req.get('Referer'),
+      host: req.get('Host'),
+      corsOrigins: config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'],
+      headers: req.headers
+    }
   });
 });
 
