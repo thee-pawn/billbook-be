@@ -70,9 +70,6 @@ app.use(cors({
     exposedHeaders: ['Content-Length', 'X-Request-ID']
 }));
 
-// Handle preflight requests
-app.options('*', cors());
-
 // Logging middleware
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
