@@ -8,92 +8,31 @@ const database = require('./src/config/database');
 const errorHandler = require('./src/middleware/errorHandler');
 const { generalLimiter } = require('./src/middleware/rateLimiter');
 
-// Import routes
-const indexRoutes = require('./src/routes/index');
-const authRoutes = require('./src/routes/auth');
-const uploadRoutes = require('./src/routes/upload');
-
+// Create Express app
 const app = express();
-
-// Trust proxy (important for rate limiting behind reverse proxy)
 app.set('trust proxy', 1);
-
-// Security middleware
 app.use(helmet());
-
-// Compression middleware
 app.use(compression());
 
-// CORS configuration - use environment variable
-const corsOrigins = config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'];
-
-// Debug logging
-console.log('=== CORS Configuration Debug ===');
-console.log('CORS_ORIGIN from env:', config.corsOrigin);
-console.log('Parsed corsOrigins:', corsOrigins);
-console.log('Node Environment:', config.nodeEnv);
-console.log('================================');
-
-// Manual CORS implementation to force headers
-app.use((req, res, next) => {
-    const origin = req.get('Origin');
-    console.log(`=== Manual CORS Handler - ${req.method} ${req.path} ===`);
-    console.log('Origin header:', origin);
-    console.log('Available corsOrigins:', corsOrigins);
-
-    // Check if origin is allowed
-    const isOriginAllowed = !origin || corsOrigins.includes('*') || corsOrigins.includes(origin);
-
-    if (isOriginAllowed) {
-        // Force set CORS headers
-        res.header('Access-Control-Allow-Origin', origin || '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Access-Control-Max-Age', '86400');
-
-        console.log('CORS headers set manually:', {
-            'Access-Control-Allow-Origin': origin || '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
-            'Access-Control-Allow-Credentials': 'true'
-        });
-
-        // Handle preflight OPTIONS requests
-        if (req.method === 'OPTIONS') {
-            console.log('Handling OPTIONS preflight request');
-            return res.status(204).end();
-        }
-    } else {
-        console.log('CORS BLOCKED - Origin not allowed:', origin);
-        return res.status(403).json({ error: 'CORS not allowed' });
-    }
-
-    next();
-});
-
-// Additional middleware to ensure CORS headers are always present
-app.use((req, res, next) => {
-    const origin = req.get('Origin');
-    const isOriginAllowed = !origin || corsOrigins.includes('*') || corsOrigins.includes(origin);
-
-    if (isOriginAllowed) {
-        // Override any existing CORS headers that might be set later
-        const originalEnd = res.end;
-        res.end = function(chunk, encoding) {
-            // Force set CORS headers right before sending response
-            res.header('Access-Control-Allow-Origin', origin || '*');
-            res.header('Access-Control-Allow-Credentials', 'true');
-            console.log('Final CORS headers forced before response:', {
-                'Access-Control-Allow-Origin': origin || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            originalEnd.call(this, chunk, encoding);
-        };
-    }
-
-    next();
-});
+// ===== Minimal CORS (Step 1) =====
+const allowedOrigins = [
+  'https://www.billbookplus.com',
+  'https://billbookplus.com',
+  'https://main.d331ydh68dzthe.amplifyapp.com'
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow same-site / curl
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS'));
+  },
+  credentials: true
+}));
+// Ensure caches/proxies vary on Origin
+app.use((req, res, next) => { res.header('Vary', 'Origin'); next(); });
+// Optional explicit preflight fast path
+app.options('*', (req, res) => res.sendStatus(204));
+// ===== End Minimal CORS =====
 
 // Logging middleware
 if (config.nodeEnv === 'development') {
@@ -110,6 +49,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(generalLimiter);
 
 // API routes
+const indexRoutes = require('./src/routes/index');
+const authRoutes = require('./src/routes/auth');
+const uploadRoutes = require('./src/routes/upload');
 app.use(`/api/${config.apiVersion}`, indexRoutes);
 app.use(`/api/${config.apiVersion}/auth`, authRoutes);
 app.use(`/api/${config.apiVersion}/upload`, uploadRoutes);
@@ -122,20 +64,6 @@ app.get('/', (req, res) => {
     version: config.apiVersion,
     environment: config.nodeEnv,
     timestamp: new Date().toISOString()
-  });
-});
-
-// Debug CORS endpoint
-app.get('/debug-cors', (req, res) => {
-  res.json({
-    success: true,
-    debug: {
-      origin: req.get('Origin'),
-      referer: req.get('Referer'),
-      host: req.get('Host'),
-      corsOrigins: config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'],
-      headers: req.headers
-    }
   });
 });
 
