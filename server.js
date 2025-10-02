@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
@@ -22,7 +23,17 @@ app.use(helmet());
 
 // Compression middleware
 app.use(compression());
+const allowedOrigins = [
+    'https://www.billbookplus.com',
+    'https://billbookplus.com',
+    'https://main.d331ydh68dzthe.amplifyapp.com'
+];
 
+// Update your CORS configuration
+app.use(cors({
+    origin: allowedOrigins,
+    credentials: true
+}));
 // Logging middleware
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
