@@ -72,6 +72,29 @@ app.use((req, res, next) => {
     next();
 });
 
+// Additional middleware to ensure CORS headers are always present
+app.use((req, res, next) => {
+    const origin = req.get('Origin');
+    const isOriginAllowed = !origin || corsOrigins.includes('*') || corsOrigins.includes(origin);
+
+    if (isOriginAllowed) {
+        // Override any existing CORS headers that might be set later
+        const originalEnd = res.end;
+        res.end = function(chunk, encoding) {
+            // Force set CORS headers right before sending response
+            res.header('Access-Control-Allow-Origin', origin || '*');
+            res.header('Access-Control-Allow-Credentials', 'true');
+            console.log('Final CORS headers forced before response:', {
+                'Access-Control-Allow-Origin': origin || '*',
+                'Access-Control-Allow-Credentials': 'true'
+            });
+            originalEnd.call(this, chunk, encoding);
+        };
+    }
+
+    next();
+});
+
 // Logging middleware
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
