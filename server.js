@@ -70,6 +70,36 @@ app.use(cors({
     exposedHeaders: ['Content-Length', 'X-Request-ID']
 }));
 
+// Add response debugging middleware
+app.use((req, res, next) => {
+    const originalSend = res.send;
+    const originalJson = res.json;
+
+    res.send = function(data) {
+        console.log(`=== Response Headers Debug - ${req.method} ${req.path} ===`);
+        console.log('Access-Control-Allow-Origin:', res.get('Access-Control-Allow-Origin'));
+        console.log('Access-Control-Allow-Methods:', res.get('Access-Control-Allow-Methods'));
+        console.log('Access-Control-Allow-Headers:', res.get('Access-Control-Allow-Headers'));
+        console.log('Access-Control-Allow-Credentials:', res.get('Access-Control-Allow-Credentials'));
+        console.log('All response headers:', res.getHeaders());
+        console.log('===========================================');
+        return originalSend.call(this, data);
+    };
+
+    res.json = function(data) {
+        console.log(`=== Response Headers Debug - ${req.method} ${req.path} ===`);
+        console.log('Access-Control-Allow-Origin:', res.get('Access-Control-Allow-Origin'));
+        console.log('Access-Control-Allow-Methods:', res.get('Access-Control-Allow-Methods'));
+        console.log('Access-Control-Allow-Headers:', res.get('Access-Control-Allow-Headers'));
+        console.log('Access-Control-Allow-Credentials:', res.get('Access-Control-Allow-Credentials'));
+        console.log('All response headers:', res.getHeaders());
+        console.log('===========================================');
+        return originalJson.call(this, data);
+    };
+
+    next();
+});
+
 // Logging middleware
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
