@@ -67,8 +67,39 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Content-Length', 'X-Request-ID']
+    exposedHeaders: ['Content-Length', 'X-Request-ID'],
+    optionsSuccessStatus: 204 // For legacy browser support
 }));
+
+// Explicit OPTIONS handler to ensure preflight requests are handled properly
+app.options('*', (req, res) => {
+    console.log(`=== Explicit OPTIONS Handler - ${req.path} ===`);
+    console.log('Origin:', req.get('Origin'));
+
+    const origin = req.get('Origin');
+    const corsOrigins = config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'];
+
+    // Check if origin is allowed
+    if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin || '*');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Max-Age', '86400');
+
+        console.log('OPTIONS response headers set:', {
+            'Access-Control-Allow-Origin': origin || '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+            'Access-Control-Allow-Credentials': 'true'
+        });
+
+        return res.status(204).end();
+    } else {
+        console.log('OPTIONS request blocked for origin:', origin);
+        return res.status(403).json({ error: 'CORS not allowed' });
+    }
+});
 
 // Add response debugging middleware
 app.use((req, res, next) => {
