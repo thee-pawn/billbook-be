@@ -23,17 +23,32 @@ app.use(helmet());
 
 // Compression middleware
 app.use(compression());
-const allowedOrigins = [
-    'https://www.billbookplus.com',
-    'https://billbookplus.com',
-    'https://main.d331ydh68dzthe.amplifyapp.com'
-];
 
-// Update your CORS configuration
+// CORS configuration - use environment variable
+const corsOrigins = config.corsOrigin ? config.corsOrigin.split(',').map(origin => origin.trim()) : ['*'];
+
 app.use(cors({
-    origin: allowedOrigins,
-    credentials: true
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // Check if origin is in allowed list
+        if (corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        console.log(`CORS blocked origin: ${origin}, allowed: ${corsOrigins.join(', ')}`);
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Length', 'X-Request-ID']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
+
 // Logging middleware
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
