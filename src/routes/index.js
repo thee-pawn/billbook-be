@@ -27,6 +27,7 @@ const appointmentsRoutes = require('./appointments');
 const enquiriesRoutes = require('./enquiries');
 const bookingsRoutes = require('./bookings');
 const billingRoutes = require('./billing');
+const salesQueriesRoutes = require('./salesQueries');
 
 // Mount all route modules
 router.use('/auth', authRoutes);
@@ -47,6 +48,7 @@ router.use('/staff', staffRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/messaging', messagingRoutes);
 router.use('/staff-payments', staffPaymentsRoutes);
+router.use('/sales-queries', salesQueriesRoutes);
 router.use('/', bookingsRoutes); // provides /store/:storeId/bookings endpoints
 router.use('/', appointmentsRoutes); // provides /store/:storeId/appointments endpoints
 router.use('/', billingRoutes); // provides /billing/:storeId/* endpoints
