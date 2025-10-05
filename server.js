@@ -18,7 +18,8 @@ app.use(compression());
 const allowedOrigins = [
   'https://www.billbookplus.com',
   'https://billbookplus.com',
-  'https://main.d331ydh68dzthe.amplifyapp.com'
+  'https://main.d331ydh68dzthe.amplifyapp.com',
+  "http://localhost:5173"
 ];
 app.use(cors({
   origin: (origin, cb) => {

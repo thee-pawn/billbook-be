@@ -69,7 +69,12 @@ module.exports = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000 // Increased from 100 to 1000
   },
 
-  // Twilio Configuration
+  // 2factor OTP Configuration
+  twofactor: {
+    apiKey: process.env.TWOFACTOR_API_KEY
+  },
+
+  // Twilio Configuration (deprecated - kept for backward compatibility)
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
