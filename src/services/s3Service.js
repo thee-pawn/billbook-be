@@ -12,16 +12,16 @@ let s3Options = {
 };
 
 // Use LocalStack in development mode
-if (process.env.NODE_ENV === 'development') {
-  s3Options = {
-    accessKeyId: 'test', // LocalStack default credentials
-    secretAccessKey: 'test', // LocalStack default credentials
-    endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566', // LocalStack default endpoint
-    s3ForcePathStyle: true,
-    signatureVersion: 'v4'
-  };
-  console.log('Using LocalStack S3 endpoint for development');
-}
+// if (process.env.NODE_ENV === 'development') {
+//   s3Options = {
+//     accessKeyId: 'test', // LocalStack default credentials
+//     secretAccessKey: 'test', // LocalStack default credentials
+//     endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566', // LocalStack default endpoint
+//     s3ForcePathStyle: true,
+//     signatureVersion: 'v4'
+//   };
+//   console.log('Using LocalStack S3 endpoint for development');
+// }
 
 // Configure AWS with appropriate options
 AWS.config.update(s3Options);
