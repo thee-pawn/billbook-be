@@ -22,21 +22,35 @@ async function createBookingTx(client, storeId, userId, payload, items) {
   
   const resolvedCustomerId = customerResult.customerId;
 
-  const insertBookingQuery = `
-    INSERT INTO bookings (
-      store_id, customer_id, country_code, contact_no, phone_number, customer_name, gender, email, address,
-      booking_datetime, venue_type, remarks, status, total_amount, advance_amount, payable_amount, payment_mode,
-      created_by, updated_by
-    ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'scheduled',$13,$14,$15,$16,$17,$17
-    ) RETURNING *`;
+    const insertBookingQuery = `
+        INSERT INTO bookings (
+            store_id, customer_id, country_code, contact_no, customer_name, gender, email, address,
+            booking_datetime, venue_type, remarks, status, total_amount, advance_amount, payable_amount, payment_mode,
+            created_by, updated_by, phone_number
+        ) VALUES (
+                     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'scheduled',$12,$13,$14,$15,$16,$17, $18
+                 ) RETURNING *`;
 
-  const values = [
-    storeId, resolvedCustomerId || null, payload.country_code, payload.contact_no, phone_number,
-    payload.customer_name, payload.gender, payload.email || null, payload.address || null,
-    payload.booking_datetime, payload.venue_type, payload.remarks || null,
-    total, payload.advance_amount || 0, payable, payload.payment_mode, userId
-  ];
+    const values = [
+        storeId,
+        resolvedCustomerId || null,
+        payload.country_code,
+        payload.contact_no,
+        payload.customer_name,
+        payload.gender,
+        payload.email || null,
+        payload.address || null,
+        payload.booking_datetime,
+        payload.venue_type,
+        payload.remarks || null,
+        total,
+        payload.advance_amount || 0,
+        payable,
+        payload.payment_mode,
+        userId,      // created_by
+        userId,
+        payload.country_code + payload.contact_no// updated_by (same at creation)
+    ];
 
   const { rows: [booking] } = await client.query(insertBookingQuery, values);
 
@@ -130,7 +144,7 @@ async function updateBookingTx(client, storeId, userId, bookingId, payload, item
     RETURNING *`;
 
   const values = [
-    payload.customer_id || null, payload.country_code, payload.contact_no, phone_number,
+    payload.customer_id || null, payload.country_code, payload.contact_no, payload.country_code + payload.contact_no,
     payload.customer_name, payload.gender, payload.email || null, payload.address || null,
     payload.booking_datetime, payload.venue_type, payload.remarks || null,
     total, payload.advance_amount || 0, payable, payload.payment_mode,

@@ -14,7 +14,8 @@ const {
   storeIdParamSchema,
   heldIdParamSchema,
   billIdParamSchema,
-  customerIdParamSchema
+  customerIdParamSchema,
+  deleteBillsSchema
 } = require('../utils/billingValidation');
 
 // Helper function to check store access
@@ -223,7 +224,7 @@ async function getBillDetails(billId, storeId) {
 }
 
 // POST /billing/{storeId}/bills - Save/finalize a bill
-router.post('/billing/:storeId/bills', 
+router.post('/:storeId/bills',
   authenticateToken, 
   generalLimiter, 
   validateParams(storeIdParamSchema), 
@@ -284,7 +285,7 @@ router.post('/billing/:storeId/bills',
 );
 
 // GET /billing/{storeId}/bills - List bills
-router.get('/billing/:storeId/bills',
+router.get('/:storeId/bills',
   authenticateToken,
   generalLimiter,
   validateParams(storeIdParamSchema),
@@ -434,7 +435,7 @@ router.get('/billing/:storeId/bills',
 );
 
 // GET /billing/{storeId}/customers/{customerId}/bills - List bills for a specific customer
-router.get('/billing/:storeId/customers/:customerId/bills',
+router.get('/:storeId/customers/:customerId/bills',
   authenticateToken,
   generalLimiter,
   validateParams(customerIdParamSchema),
@@ -631,7 +632,7 @@ router.get('/billing/:storeId/customers/:customerId/bills',
 );
 
 // POST /billing/{storeId}/bills/hold - Put bill on hold
-router.post('/billing/:storeId/bills/hold',
+router.post('/:storeId/bills/hold',
   authenticateToken,
   generalLimiter,
   validateParams(storeIdParamSchema),
@@ -685,7 +686,7 @@ router.post('/billing/:storeId/bills/hold',
 );
 
 // GET /billing/{storeId}/bills/held - List held bills
-router.get('/billing/:storeId/bills/held',
+router.get('/:storeId/bills/held',
   authenticateToken,
   generalLimiter,
   validateParams(storeIdParamSchema),
@@ -746,7 +747,7 @@ router.get('/billing/:storeId/bills/held',
 );
 
 // GET /billing/{storeId}/bills/held/{heldId} - Get held bill by id
-router.get('/billing/:storeId/bills/held/:heldId',
+router.get('/:storeId/bills/held/:heldId',
   authenticateToken,
   generalLimiter,
   validateParams(heldIdParamSchema),
@@ -800,7 +801,7 @@ router.get('/billing/:storeId/bills/held/:heldId',
 );
 
 // GET /billing/{storeId}/bills/{billId} - Get bill by ID (Public API - No Auth Required)
-router.get('/billing/:storeId/bills/:billId',
+router.get('/:storeId/bills/:billId',
   generalLimiter,
   validateParams(billIdParamSchema),
   async (req, res, next) => {
@@ -820,6 +821,98 @@ router.get('/billing/:storeId/bills/:billId',
       res.json({
         success: true,
         data: billDetails
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// DELETE /billing/{storeId}/bills - Delete multiple bills
+router.delete('/:storeId/bills',
+  authenticateToken,
+  generalLimiter,
+  validateParams(storeIdParamSchema),
+  validate(deleteBillsSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { storeId } = req.params;
+      const { bill_ids } = req.body;
+
+      // Check store access
+      const userRole = await checkStoreAccess(storeId, userId);
+      if (!userRole) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have access to this store'
+        });
+      }
+
+      // Validate that all bills exist and belong to the store
+      const existingBillsQuery = `
+        SELECT id, invoice_number
+        FROM bills 
+        WHERE id = ANY($1) AND store_id = $2
+      `;
+      const existingBillsResult = await database.query(existingBillsQuery, [bill_ids, storeId]);
+
+      if (existingBillsResult.rows.length !== bill_ids.length) {
+        const foundIds = existingBillsResult.rows.map(bill => bill.id);
+        const notFoundIds = bill_ids.filter(id => !foundIds.includes(id));
+
+        return res.status(404).json({
+          success: false,
+          message: 'Some bills were not found',
+          data: {
+            not_found_bill_ids: notFoundIds
+          }
+        });
+      }
+
+      // Delete bills and related data in transaction
+      const result = await withTransaction(async (client) => {
+        const deletedBills = [];
+
+        for (const billId of bill_ids) {
+          // Get bill details before deletion for audit
+          const billResult = await client.query(
+            'SELECT id, invoice_number, grand_total FROM bills WHERE id = $1',
+            [billId]
+          );
+
+          if (billResult.rows.length > 0) {
+            const bill = billResult.rows[0];
+
+            // Delete related records in correct order (respecting foreign key constraints)
+            // 1. Delete bill payments
+            await client.query('DELETE FROM bill_payments WHERE bill_id = $1', [billId]);
+
+            // 2. Delete bill items
+            await client.query('DELETE FROM bill_items WHERE bill_id = $1', [billId]);
+
+            // 3. Delete the bill itself
+            await client.query('DELETE FROM bills WHERE id = $1', [billId]);
+
+            deletedBills.push({
+              id: bill.id,
+              invoice_number: bill.invoice_number,
+              grand_total: parseFloat(bill.grand_total)
+            });
+          }
+        }
+
+        return deletedBills;
+      });
+
+      res.json({
+        success: true,
+        message: `Successfully deleted ${result.length} bill(s)`,
+        data: {
+          deleted_bills: result,
+          deleted_count: result.length
+        }
       });
 
     } catch (error) {
