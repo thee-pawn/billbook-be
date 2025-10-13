@@ -829,7 +829,7 @@ router.get('/:storeId/bills/:billId',
   }
 );
 
-// DELETE /billing/{storeId}/bills - Delete multiple bills
+// DELETE /billing/{storeId}/bills - Delete multiple bills (soft delete)
 router.delete('/:storeId/bills',
   authenticateToken,
   generalLimiter,
@@ -852,9 +852,9 @@ router.delete('/:storeId/bills',
 
       // Validate that all bills exist and belong to the store
       const existingBillsQuery = `
-        SELECT id, invoice_number
+        SELECT id, invoice_number, status
         FROM bills 
-        WHERE id = ANY($1) AND store_id = $2
+        WHERE id = ANY($1) AND store_id = $2 AND status != 'deleted'
       `;
       const existingBillsResult = await database.query(existingBillsQuery, [bill_ids, storeId]);
 
@@ -864,41 +864,43 @@ router.delete('/:storeId/bills',
 
         return res.status(404).json({
           success: false,
-          message: 'Some bills were not found',
+          message: 'Some bills were not found or already deleted',
           data: {
             not_found_bill_ids: notFoundIds
           }
         });
       }
 
-      // Delete bills and related data in transaction
+      // Soft delete bills in transaction
       const result = await withTransaction(async (client) => {
         const deletedBills = [];
 
         for (const billId of bill_ids) {
-          // Get bill details before deletion for audit
+          // Get bill details before soft deletion for audit
           const billResult = await client.query(
-            'SELECT id, invoice_number, grand_total FROM bills WHERE id = $1',
+            'SELECT id, invoice_number, grand_total, status FROM bills WHERE id = $1',
             [billId]
           );
 
           if (billResult.rows.length > 0) {
             const bill = billResult.rows[0];
 
-            // Delete related records in correct order (respecting foreign key constraints)
-            // 1. Delete bill payments
-            await client.query('DELETE FROM bill_payments WHERE bill_id = $1', [billId]);
-
-            // 2. Delete bill items
-            await client.query('DELETE FROM bill_items WHERE bill_id = $1', [billId]);
-
-            // 3. Delete the bill itself
-            await client.query('DELETE FROM bills WHERE id = $1', [billId]);
+            // Mark bill as deleted with timestamp
+            await client.query(
+              `UPDATE bills 
+               SET status = 'deleted', 
+                   updated_at = CURRENT_TIMESTAMP,
+                   deleted_at = CURRENT_TIMESTAMP,
+                   deleted_by = $2
+               WHERE id = $1`,
+              [billId, userId]
+            );
 
             deletedBills.push({
               id: bill.id,
               invoice_number: bill.invoice_number,
-              grand_total: parseFloat(bill.grand_total)
+              grand_total: parseFloat(bill.grand_total),
+              previous_status: bill.status
             });
           }
         }
@@ -922,3 +924,4 @@ router.delete('/:storeId/bills',
 );
 
 module.exports = router;
+
