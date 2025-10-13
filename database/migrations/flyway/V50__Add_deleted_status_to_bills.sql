@@ -1,4 +1,4 @@
-i-- V50: Add deleted status to bills table and related fields
+-- V50: Add deleted status to bills table and related fields
 
 -- Drop the existing CHECK constraint
 ALTER TABLE bills DROP CONSTRAINT bills_status_check;
