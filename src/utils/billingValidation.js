@@ -189,6 +189,11 @@ const customerIdParamSchema = Joi.object({
   customerId: Joi.string().uuid().required()
 });
 
+// Delete bills schema
+const deleteBillsSchema = Joi.object({
+  bill_ids: Joi.array().items(Joi.string().uuid()).min(1).max(50).required()
+});
+
 module.exports = {
   saveBillSchema,
   holdBillSchema,
@@ -198,5 +203,6 @@ module.exports = {
   storeIdParamSchema,
   heldIdParamSchema,
   billIdParamSchema,
-  customerIdParamSchema
+  customerIdParamSchema,
+  deleteBillsSchema
 };
