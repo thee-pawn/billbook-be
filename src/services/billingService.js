@@ -103,13 +103,12 @@ class BillingService {
   calculateLineItem(item, catalogItem, taxMode) {
     const basePrice = parseFloat(catalogItem.price);
     const qty = item.qty;
-    const cgstRate = item.cgst / 100; // Convert percentage to decimal
-    const sgstRate = item.sgst / 100;
+    const cgstRate = (item.cgst/item.price) * 100; // Convert percentage to decimal
+    const sgstRate = (item.sgst/item.price) * 100;
     const totalTaxRate = cgstRate + sgstRate;
     
     let baseAmount, discountAmount, cgstAmount, sgstAmount, lineTotal;
     
-    if (taxMode === 'inclusive') {
       // Price includes tax, extract base amount first
       const grossAmount = basePrice * qty;
       baseAmount = grossAmount / (1 + totalTaxRate);
@@ -118,29 +117,12 @@ class BillingService {
       if (item.discount_type === 'percent') {
         discountAmount = (baseAmount * item.discount_value) / 100;
       } else {
-        discountAmount = Math.min(item.discount_value, baseAmount);
+        discountAmount = item.discount_value;
       }
-      
       const netBase = baseAmount - discountAmount;
-      cgstAmount = netBase * cgstRate;
-      sgstAmount = netBase * sgstRate;
+      cgstAmount = item.cgst;
+      sgstAmount = item.sgst;
       lineTotal = netBase + cgstAmount + sgstAmount;
-    } else {
-      // Exclusive: tax added on top
-      baseAmount = basePrice * qty;
-      
-      // Apply discount on base amount
-      if (item.discount_type === 'percent') {
-        discountAmount = (baseAmount * item.discount_value) / 100;
-      } else {
-        discountAmount = Math.min(item.discount_value, baseAmount);
-      }
-      
-      const netBase = baseAmount - discountAmount;
-      cgstAmount = netBase * cgstRate;
-      sgstAmount = netBase * sgstRate;
-      lineTotal = netBase + cgstAmount + sgstAmount;
-    }
     
     return {
       base_amount: this.round(baseAmount),
@@ -156,46 +138,24 @@ class BillingService {
     const unitPrice = parseFloat(item.price);
     const qty = item.qty;
     const baseAmount = unitPrice * qty;
+    let cgstAmount, sgstAmount;
+    cgstAmount = item.cgst;
+    sgstAmount = item.sgst;
     
-    // Apply discount on base amount
+
     let discountAmount;
     if (item.discount_type === 'percent') {
       discountAmount = (baseAmount * item.discount_value) / 100;
     } else {
-      discountAmount = Math.min(item.discount_value, baseAmount);
+      discountAmount = item.discount_value;
     }
     
     const taxableAmount = baseAmount - discountAmount;
     
-    // CGST and SGST can be provided as rates or amounts
-    // If values are small (< 1), treat as rates, otherwise as amounts
-    let cgstAmount, sgstAmount;
-    
-    if (item.cgst < 1) {
-      // Treat as rate (percentage in decimal)
-      cgstAmount = taxableAmount * item.cgst;
-    } else if (item.cgst <= 100) {
-      // Treat as percentage rate
-      cgstAmount = taxableAmount * (item.cgst / 100);
-    } else {
-      // Treat as direct amount
-      cgstAmount = item.cgst;
-    }
-    
-    if (item.sgst < 1) {
-      // Treat as rate (percentage in decimal)  
-      sgstAmount = taxableAmount * item.sgst;
-    } else if (item.sgst <= 100) {
-      // Treat as percentage rate
-      sgstAmount = taxableAmount * (item.sgst / 100);
-    } else {
-      // Treat as direct amount
-      sgstAmount = item.sgst;
-    }
     
     const taxAmount = cgstAmount + sgstAmount;
     const lineTotal = taxableAmount + taxAmount;
-    
+    console.log(baseAmount, discountAmount, taxableAmount, taxAmount)
     return {
       unit_price: this.round(unitPrice),
       base_amount: this.round(baseAmount),
@@ -232,7 +192,7 @@ class BillingService {
   // Generate invoice number (race condition safe)
   async generateInvoiceNumber(client, storeId) {
     const now = new Date();
-    const year = now.getFullYear();
+    const year = now.getFullYear().toString().substring(2,3);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
     
@@ -240,7 +200,7 @@ class BillingService {
     // Format: INV{YEAR}{MONTH}{DAY}{HHMMSS}{milliseconds}
     const timestamp = now.toISOString().replace(/[-:T.]/g, '').slice(8, 17); // HHMMSSMMM
     
-    return `INV${year}${month}${day}${timestamp}`;
+    return `${year}${month}${day}${timestamp}`;
   }
   
   // Calculate payment status
@@ -281,8 +241,8 @@ class BillingService {
     // Resolve customer
     const customer = await this.resolveCustomer(client, storeId, payload);
     
-    // Get store tax settings
-    const taxMode = await this.getStoreTaxSettings(client, storeId);
+    // // Get store tax settings
+    // const taxMode = await this.getStoreTaxSettings(client, storeId);
     
     // Process items and calculate totals
     const processedItems = [];
@@ -351,8 +311,8 @@ class BillingService {
           bill.id, item.line_no, item.type, item.id, item.name, item.staff_id || null, item.qty,
           item.discount_type, item.discount_value, 
           // Store original rates for reference (convert back to percentage for storage)
-          item.price !== undefined ? (item.cgst <= 1 ? item.cgst * 100 : (item.cgst <= 100 ? item.cgst : item.cgst / item.base_amount * 100)) : item.cgst,
-          item.price !== undefined ? (item.sgst <= 1 ? item.sgst * 100 : (item.sgst <= 100 ? item.sgst : item.sgst / item.base_amount * 100)) : item.sgst,
+          (item.cgst_amount / item.base_amount * 100).toFixed(2),
+          (item.sgst_amount / item.base_amount * 100).toFixed(2),
           item.base_amount, item.discount_amount, item.cgst_amount, item.sgst_amount, item.line_total
         ]
       );

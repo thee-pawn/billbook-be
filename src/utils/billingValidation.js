@@ -48,7 +48,8 @@ const baseBillSchema = {
   payment_amount: Joi.number().precision(2).min(0).default(0),
   payments: Joi.array().items(paymentSchema).default([]),
   billing_timestamp: Joi.date().iso().required(),
-  payment_timestamp: Joi.date().iso().optional()
+  payment_timestamp: Joi.date().iso().optional(),
+  appointmentId: Joi.string().uuid().allow(null).optional()
 };
 
 // Save bill schema (requires either customer_id, customer, or customer_details)
@@ -57,7 +58,6 @@ const saveBillSchema = Joi.object(baseBillSchema).custom((value, helpers) => {
   const hasCustomerId = !!value.customer_id;
   const hasCustomer = !!value.customer;
   const hasCustomerDetails = !!value.customer_details;
-  
   const customerFieldsCount = [hasCustomerId, hasCustomer, hasCustomerDetails].filter(Boolean).length;
   
   if (customerFieldsCount > 1) {

@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { validate, validateParams, validateQuery } = require('../middleware/validation');
 const { generalLimiter } = require('../middleware/rateLimiter');
 const database = require('../config/database');
+const { updateAppointmentStatus } = require('../services/appointmentService');
 const billingService = require('../services/billingService');
 const {
   saveBillSchema,
@@ -122,6 +123,8 @@ async function getBillDetails(billId, storeId) {
 
   const { rows: paymentsRows } = await database.query(paymentsQuery, [billId]);
 
+        console.log(itemsRows[0]);
+
   // Format the response
   return {
     bill: {
@@ -169,8 +172,11 @@ async function getBillDetails(billId, storeId) {
         logo_url: bill.store_logo
       },
 
+
+
       // Bill items with details
       items: itemsRows.map(item => ({
+        
         line_no: item.line_no,
         type: item.type,
         catalog_id: item.catalog_id,
@@ -178,7 +184,7 @@ async function getBillDetails(billId, storeId) {
         description: item.item_description,
         staff_id: item.staff_id,
         staff_name: item.staff_name,
-        quantity: item.quantity,
+        quantity: item.qty,
         unit_price: parseFloat(item.unit_price),
         discount_type: item.discount_type,
         discount_value: parseFloat(item.discount_value || 0),
@@ -272,6 +278,11 @@ router.post('/:storeId/bills',
           message: 'Bill created but could not retrieve details'
         });
       }
+
+      if(req.body.appointmentId){
+        await withTransaction((client) =>
+        updateAppointmentStatus(client, req.body.appointmentId, 'billed', userId));
+      }
       
       res.status(201).json({
         success: true,
@@ -338,6 +349,9 @@ router.get('/:storeId/bills',
         whereConditions.push(`b.status = $${paramCount}`);
         params.push(status);
         paramCount++;
+      }
+      else {
+        whereConditions.push(`b.status != 'deleted'`);
       }
       
       if (q) {
@@ -850,11 +864,13 @@ router.delete('/:storeId/bills',
         });
       }
 
+      console.log('bill_ids:', bill_ids, 'isArray:', Array.isArray(bill_ids), 'length:', bill_ids && bill_ids.length);
+
       // Validate that all bills exist and belong to the store
       const existingBillsQuery = `
         SELECT id, invoice_number, status
         FROM bills 
-        WHERE id = ANY($1) AND store_id = $2 AND status != 'deleted'
+        WHERE id = ANY($1::uuid[]) AND store_id = $2 AND status != 'deleted'
       `;
       const existingBillsResult = await database.query(existingBillsQuery, [bill_ids, storeId]);
 

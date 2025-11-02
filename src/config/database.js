@@ -28,9 +28,9 @@ class Database {
       const res = await this.pool.query(text, params);
       const duration = Date.now() - start;
       
-      if (config.logLevel === 'debug') {
+
         console.log('Executed query', { text, duration, rows: res.rowCount });
-      }
+
       
       return res;
     } catch (error) {
