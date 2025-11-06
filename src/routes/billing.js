@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { validate, validateParams, validateQuery } = require('../middleware/validation');
+const { validateAllowUnknown } = require('../middleware/validation');
 const { generalLimiter } = require('../middleware/rateLimiter');
 const database = require('../config/database');
 const { updateAppointmentStatus } = require('../services/appointmentService');
@@ -289,6 +290,48 @@ router.post('/:storeId/bills',
         message: 'Bill saved successfully',
         data: billDetails
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// PUT /billing/{storeId}/bills/{billId} - Update an existing bill
+router.put('/:storeId/bills/:billId',
+  authenticateToken,
+  generalLimiter,
+  validateParams(billIdParamSchema),
+  // Allow unknown keys here (frontend may include billId in payload)
+  validateAllowUnknown(saveBillSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { storeId, billId } = req.params;
+      const idempotencyKey = req.headers['idempotency-key'];
+
+      // Check store access
+      const userRole = await checkStoreAccess(storeId, userId);
+      if (!userRole) {
+        return res.status(403).json({ success: false, message: 'You do not have access to this store' });
+      }
+
+      // Process update in transaction
+      const result = await withTransaction((client) =>
+        billingService.updateBillTransaction(client, storeId, userId, billId, req.body, idempotencyKey)
+      );
+
+      // Get complete bill details
+      const billDetails = await getBillDetails(billId, storeId);
+      if (!billDetails) {
+        return res.status(500).json({ success: false, message: 'Bill updated but could not retrieve details' });
+      }
+
+      // If appointmentId present in payload, update appointment status to billed
+      if (req.body.appointmentId) {
+        await withTransaction((client) => updateAppointmentStatus(client, req.body.appointmentId, 'billed', userId));
+      }
+
+      res.json({ success: true, message: 'Bill updated successfully', data: billDetails });
     } catch (error) {
       next(error);
     }

@@ -25,6 +25,33 @@ const validate = (schema) => {
   };
 };
 
+// Variant that allows unknown keys in the request body (useful for update endpoints
+// where frontend may include extra fields like `billId`). This keeps strict
+// validation for most endpoints while allowing controlled relaxation where needed.
+const validateAllowUnknown = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.body, { allowUnknown: true });
+
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      try {
+        console.warn('[VALIDATION][BODY]', {
+          method: req.method,
+          url: req.originalUrl,
+          message: errorMessage
+        });
+      } catch (_) {}
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        details: errorMessage
+      });
+    }
+
+    next();
+  };
+};
+
 const validateQuery = (schema) => {
   return (req, res, next) => {
     const { error } = schema.validate(req.query);
@@ -851,5 +878,6 @@ module.exports = {
   validate,
   validateQuery,
   validateParams,
+  validateAllowUnknown,
   schemas
 };

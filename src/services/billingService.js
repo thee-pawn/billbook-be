@@ -420,6 +420,191 @@ class BillingService {
       excessAmountAddedToAdvance: excessAmount > 0 ? excessAmount : null
     };
   }
+
+  // Update bill transaction
+  async updateBillTransaction(client, storeId, userId, billId, payload) {
+    // Lock existing bill row
+    const { rows: existingRows } = await client.query(
+      'SELECT * FROM bills WHERE id = $1 AND store_id = $2 FOR UPDATE',
+      [billId, storeId]
+    );
+
+    if (!existingRows.length) {
+      throw new Error('Bill not found in this store');
+    }
+
+    const existingBill = existingRows[0];
+
+    // Refund previous advance payments (add back to customer's advance_amount)
+    const prevPaymentsRes = await client.query('SELECT * FROM bill_payments WHERE bill_id = $1', [billId]);
+    for (const p of prevPaymentsRes.rows) {
+      if (p.mode === 'advance') {
+        await client.query(
+          `UPDATE customers SET advance_amount = COALESCE(advance_amount,0) + $1, updated_at = NOW() WHERE id = $2`,
+          [p.amount, existingBill.customer_id]
+        );
+      }
+    }
+
+    // Delete previous payments and items - we'll re-insert based on payload
+    await client.query('DELETE FROM bill_payments WHERE bill_id = $1', [billId]);
+    await client.query('DELETE FROM bill_items WHERE bill_id = $1', [billId]);
+
+    // Resolve or create customer
+    const customer = await this.resolveCustomer(client, storeId, payload);
+
+    // Process items and calculate totals
+    const processedItems = [];
+    for (const item of payload.items) {
+      const catalogItem = await this.getCatalogItem(client, storeId, item.type, item.id);
+
+      let calculations;
+      if (item.price !== undefined) {
+        calculations = this.calculateLineItemFromPrice(item);
+      } else {
+        calculations = this.calculateLineItem(item, catalogItem);
+      }
+
+      processedItems.push({
+        ...item,
+        name: catalogItem.name,
+        ...calculations
+      });
+    }
+
+    const totals = this.calculateBillTotals(processedItems, payload.discount || 0);
+
+    // Initially set paid to 0; we'll process payments below
+    let totalPaidAmount = 0;
+    const processedPayments = [];
+
+    // Update bill top-level fields
+    const { rows: updatedRows } = await client.query(
+      `UPDATE bills SET
+         customer_id = $1,
+         coupon_code = $2,
+         coupon_codes = $3,
+         referral_code = $4,
+         sub_total = $5,
+         discount = $6,
+         tax_amount = $7,
+         cgst_amount = $8,
+         sgst_amount = $9,
+         grand_total = $10,
+         payment_mode = $11,
+         billing_timestamp = $12,
+         payment_timestamp = $13,
+         updated_at = NOW()
+       WHERE id = $14
+       RETURNING *`,
+      [
+        customer.id,
+        payload.coupon_code,
+        payload.coupon_codes || [],
+        payload.referral_code,
+        totals.sub_total,
+        totals.discount,
+        totals.tax_amount,
+        totals.cgst_amount,
+        totals.sgst_amount,
+        totals.grand_total,
+        payload.payment_mode,
+        payload.billing_timestamp,
+        payload.payment_timestamp || null,
+        billId
+      ]
+    );
+
+    // Insert bill items
+    for (const item of processedItems) {
+      await client.query(
+        `INSERT INTO bill_items (
+          bill_id, line_no, type, catalog_id, name, staff_id, qty,
+          discount_type, discount_value, cgst_rate, sgst_rate,
+          base_amount, discount_amount, cgst_amount, sgst_amount, line_total
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        )`,
+        [
+          billId, item.line_no, item.type, item.id, item.name, item.staff_id || null, item.qty,
+          item.discount_type, item.discount_value,
+          (item.cgst_amount / item.base_amount * 100).toFixed(2),
+          (item.sgst_amount / item.base_amount * 100).toFixed(2),
+          item.base_amount, item.discount_amount, item.cgst_amount, item.sgst_amount, item.line_total
+        ]
+      );
+    }
+
+    // Process payments from payload
+    for (const payment of payload.payments || []) {
+      if (payment.mode === 'advance') {
+        const paymentAmount = parseFloat(payment.amount);
+        // Check if customer has sufficient advance balance
+        const { rows: custRows } = await client.query('SELECT advance_amount FROM customers WHERE id = $1', [customer.id]);
+        const currentAdvance = custRows.length ? parseFloat(custRows[0].advance_amount || 0) : 0;
+        if (currentAdvance < paymentAmount) {
+          throw new Error(`Insufficient advance balance. Available: ${currentAdvance}, Required: ${paymentAmount}`);
+        }
+
+        await client.query(
+          `UPDATE customers SET advance_amount = advance_amount - $1, updated_at = NOW() WHERE id = $2`,
+          [paymentAmount, customer.id]
+        );
+
+        const paymentTimestamp = payment.payment_timestamp || payment.timestamp;
+        await client.query(
+          `INSERT INTO bill_payments (bill_id, mode, amount, reference, timestamp)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [billId, payment.mode, payment.amount, payment.reference || 'Advance deduction', paymentTimestamp]
+        );
+
+        totalPaidAmount += paymentAmount;
+        processedPayments.push(payment);
+      } else {
+        const paymentTimestamp = payment.payment_timestamp || payment.timestamp;
+        await client.query(
+          `INSERT INTO bill_payments (bill_id, mode, amount, reference, timestamp)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [billId, payment.mode, payment.amount, payment.reference || null, paymentTimestamp]
+        );
+
+        totalPaidAmount += parseFloat(payment.amount);
+        processedPayments.push(payment);
+      }
+    }
+
+    // Handle excess amount -> add to customer's advance
+    const excessAmount = totalPaidAmount - totals.grand_total;
+    if (excessAmount > 0) {
+      await client.query(
+        `UPDATE customers SET advance_amount = COALESCE(advance_amount,0) + $1, updated_at = NOW() WHERE id = $2`,
+        [excessAmount, customer.id]
+      );
+    }
+
+    const actualPaymentStatus = this.calculatePaymentStatus(totals.grand_total, totalPaidAmount);
+
+    // Update bill with actual payment amounts and status
+    await client.query(
+      `UPDATE bills SET paid_amount = $1, dues = $2, status = $3, updated_at = NOW() WHERE id = $4`,
+      [totalPaidAmount, actualPaymentStatus.dues, actualPaymentStatus.status, billId]
+    );
+
+    const { rows: finalBillRows } = await client.query('SELECT * FROM bills WHERE id = $1', [billId]);
+
+    return {
+      bill: finalBillRows[0],
+      customer,
+      items: processedItems,
+      totals: {
+        ...totals,
+        paid: this.round(totalPaidAmount),
+        dues: actualPaymentStatus.dues
+      },
+      payments: processedPayments,
+      excessAmountAddedToAdvance: excessAmount > 0 ? excessAmount : null
+    };
+  }
   
   // Hold bill transaction
   async holdBillTransaction(client, storeId, userId, payload, idempotencyKey = null) {
